@@ -14,6 +14,8 @@ class TrackPlayer(ctk.CTkFrame):
         self.is_playing = False
         self.is_looping = False
         self.instance = None
+        self.media_list = None
+        self.media_list_player = None
         self.media_player = None
         self.track_duration = 0
         self.user_is_adjusting_slider = False
@@ -54,19 +56,22 @@ class TrackPlayer(ctk.CTkFrame):
         try:
             logging.debug(f"Loading audio file: {self.track_path}")
             self.instance = vlc.Instance()
-            self.media_player = self.instance.media_player_new()
+            self.media_list = self.instance.media_list_new()
+            self.media_list_player = self.instance.media_list_player_new()
             media = self.instance.media_new(self.track_path)
-            self.media_player.set_media(media)
+            self.media_list.add_media(media)
+            self.media_list_player.set_media_list(self.media_list)
+            self.media_player = self.media_list_player.get_media_player()
             
             # Set initial volume to 50%
             self.media_player.audio_set_volume(50)
             
             # Start playing to get the correct duration
-            self.media_player.play()
+            self.media_list_player.play()
             time.sleep(0.5)  # Wait for media to load
             
             # Get the correct duration
-            self.track_duration = self.media_player.get_length() / 1000  # Duration in seconds
+            self.track_duration = media.get_duration() / 1000  # Duration in seconds
             logging.debug(f"Track duration: {self.track_duration} seconds")
             
             self.progress_slider.configure(to=self.track_duration)
@@ -78,19 +83,19 @@ class TrackPlayer(ctk.CTkFrame):
             messagebox.showerror("Error", f"Error playing audio: {e}")
 
     def play_pause(self):
-        if self.media_player:
+        if self.media_list_player:
             if self.is_playing:
-                self.media_player.pause()
+                self.media_list_player.pause()
                 self.play_toggle.deselect()
             else:
-                self.media_player.play()
+                self.media_list_player.play()
                 self.play_toggle.select()
             self.is_playing = not self.is_playing
 
     def toggle_loop(self):
         self.is_looping = not self.is_looping
-        if self.media_player:
-            self.media_player.set_playback_mode(vlc.PlaybackMode.loop if self.is_looping else vlc.PlaybackMode.default)
+        if self.media_list_player:
+            self.media_list_player.set_playback_mode(vlc.PlaybackMode.loop if self.is_looping else vlc.PlaybackMode.default)
         if self.is_looping:
             self.loop_toggle.select()
         else:
@@ -125,7 +130,7 @@ class TrackPlayer(ctk.CTkFrame):
             self.time_label.configure(text=f"{current_str} / {duration_str}")
 
     def close_player(self):
-        if self.media_player:
-            self.media_player.stop()
+        if self.media_list_player:
+            self.media_list_player.stop()
         self.destroy()
         self.app.remove_player(self.track_name)
