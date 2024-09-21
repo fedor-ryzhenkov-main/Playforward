@@ -1,0 +1,3 @@
+([('main',
+   '/Users/Fedor-Ryzhenkov/Projects/Playforward/dist/main',
+   'EXECUTABLE')],)

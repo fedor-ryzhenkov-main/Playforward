@@ -3,9 +3,10 @@ import os
 
 def init_db():
     conn = sqlite3.connect('audio_manager.db')
+    conn.execute("PRAGMA foreign_keys = ON")  # Enable foreign key support
     cursor = conn.cursor()
     
-    # Tracks table
+    # Tracks table remains the same
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS tracks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -16,21 +17,16 @@ def init_db():
     )
     ''')
     
-    # Playlists table
+    # Items table represents both playlists and tracks in a hierarchical structure
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS playlists (
+    CREATE TABLE IF NOT EXISTS items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT
-    )
-    ''')
-    
-    # Junction table for tracks in playlists
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS playlist_tracks (
-        playlist_id INTEGER,
+        name TEXT,
+        type TEXT CHECK(type IN ('playlist', 'track')),
+        parent_id INTEGER,
         track_id INTEGER,
-        FOREIGN KEY (playlist_id) REFERENCES playlists (id),
-        FOREIGN KEY (track_id) REFERENCES tracks (id)
+        FOREIGN KEY (parent_id) REFERENCES items(id) ON DELETE CASCADE,
+        FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
     )
     ''')
     
@@ -41,87 +37,63 @@ def add_track(conn, name, path, normalized_path, tags):
     cursor = conn.cursor()
     cursor.execute('INSERT INTO tracks (name, path, normalized_path, tags) VALUES (?, ?, ?, ?)', (name, path, normalized_path, tags))
     conn.commit()
+    return cursor.lastrowid
 
-def add_playlist(conn, name):
+def add_item(conn, name, item_type, parent_id=None, track_id=None):
     cursor = conn.cursor()
-    cursor.execute('INSERT INTO playlists (name) VALUES (?)', (name,))
+    cursor.execute('''
+    INSERT INTO items (name, type, parent_id, track_id) VALUES (?, ?, ?, ?)
+    ''', (name, item_type, parent_id, track_id))
     conn.commit()
     return cursor.lastrowid
 
-def add_track_to_playlist(conn, playlist_id, track_id):
-    cursor = conn.cursor()
-    cursor.execute('INSERT INTO playlist_tracks (playlist_id, track_id) VALUES (?, ?)', (playlist_id, track_id))
-    conn.commit()
-
-def get_playlists(conn):
-    cursor = conn.cursor()
-    cursor.execute('SELECT id, name FROM playlists')
-    return cursor.fetchall()
-
-def get_tracks_in_playlist(conn, playlist_id):
+def get_items_in_parent(conn, parent_id):
     cursor = conn.cursor()
     cursor.execute('''
-    SELECT t.id, t.name, t.path, t.normalized_path, t.tags
-    FROM tracks t
-    JOIN playlist_tracks pt ON t.id = pt.track_id
-    WHERE pt.playlist_id = ?
-    ''', (playlist_id,))
+    SELECT id, name, type, track_id FROM items WHERE parent_id IS ?
+    ''', (parent_id,))
     return cursor.fetchall()
 
-def search_tracks(conn, keyword):
+def move_item(conn, item_id, new_parent_id):
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM tracks WHERE name LIKE ? OR tags LIKE ?', (f'%{keyword}%', f'%{keyword}%'))
-    return cursor.fetchall()
-
-def get_all_tracks(conn):
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM tracks')
-    return cursor.fetchall()
-
-def delete_track_from_db(conn, name):
-    cursor = conn.cursor()
-    cursor.execute('SELECT normalized_path FROM tracks WHERE name=?', (name,))
-    result = cursor.fetchone()
-    if result and result[0]:
-        normalized_path = result[0]
-        if os.path.exists(normalized_path):
-            os.remove(normalized_path)
-    cursor.execute('DELETE FROM tracks WHERE name=?', (name,))
-    cursor.execute('DELETE FROM playlist_tracks WHERE track_id IN (SELECT id FROM tracks WHERE name=?)', (name,))
+    cursor.execute('''
+    UPDATE items SET parent_id = ? WHERE id = ?
+    ''', (new_parent_id, item_id))
     conn.commit()
 
-def display_tags(conn, track_name):
+def delete_item(conn, item_id):
     cursor = conn.cursor()
-    cursor.execute('SELECT tags FROM tracks WHERE name=?', (track_name,))
-    result = cursor.fetchone()
-    return result[0] if result and result[0] else 'No tags available'
+    cursor.execute('DELETE FROM items WHERE id = ?', (item_id,))
+    conn.commit()
 
-def get_track_id_by_name(conn, track_name):
+def get_item_by_name(conn, name, parent_id):
     cursor = conn.cursor()
-    cursor.execute('SELECT id FROM tracks WHERE name=?', (track_name,))
+    cursor.execute('''
+    SELECT id, name, type, track_id FROM items WHERE name = ? AND parent_id IS ?
+    ''', (name, parent_id))
+    return cursor.fetchone()
+
+def get_track_tags_by_id(conn, track_id):
+    cursor = conn.cursor()
+    cursor.execute('SELECT tags FROM tracks WHERE id = ?', (track_id,))
+    result = cursor.fetchone()
+    return result[0] if result and result[0] else ''
+
+def get_track_path_by_id(conn, track_id):
+    cursor = conn.cursor()
+    cursor.execute('SELECT normalized_path FROM tracks WHERE id=?', (track_id,))
     result = cursor.fetchone()
     return result[0] if result else None
 
-def get_track_path_by_name(conn, track_name):
+def get_track_id_by_name(conn, name):
     cursor = conn.cursor()
-    cursor.execute('SELECT normalized_path FROM tracks WHERE name=?', (track_name,))
+    cursor.execute('SELECT id FROM tracks WHERE name=?', (name,))
     result = cursor.fetchone()
     return result[0] if result else None
 
-def update_track_tags(conn, track_name, new_tags):
+def update_track_tags(conn, track_id, new_tags):
     cursor = conn.cursor()
-    cursor.execute('UPDATE tracks SET tags=? WHERE name=?', (new_tags, track_name))
-    conn.commit()
-
-def remove_track_from_playlist(conn, playlist_id, track_id):
-    cursor = conn.cursor()
-    cursor.execute('DELETE FROM playlist_tracks WHERE playlist_id=? AND track_id=?', (playlist_id, track_id))
-    conn.commit()
-
-def delete_playlist(conn, playlist_id):
-    cursor = conn.cursor()
-    cursor.execute('DELETE FROM playlist_tracks WHERE playlist_id=?', (playlist_id,))
-    cursor.execute('DELETE FROM playlists WHERE id=?', (playlist_id,))
+    cursor.execute('UPDATE tracks SET tags = ? WHERE id = ?', (new_tags, track_id))
     conn.commit()
 
 def close_db(conn):
