@@ -1,0 +1,6 @@
+PySimpleGUI
+pydub
+mutagen
+simpleaudio
+python-vlc
+customtkinter
