@@ -1,6 +1,8 @@
 import tkinter as tk
 from audio_player_app import AudioPlayerApp
 import logging
+import sys
+import os
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
