@@ -4,3 +4,5 @@ mutagen
 simpleaudio
 python-vlc
 customtkinter
+numpy
+ffmpeg-normalize
