@@ -2,16 +2,17 @@ import logging
 import customtkinter as ctk
 import threading
 import time
-from viewmodels.track_player_vm import TrackPlayerViewModel
+from viewmodels.track_player_vm import TrackPlayerViewModel, PlayerState
 
 class TrackPlayer(ctk.CTkFrame):
     def __init__(self, master, track_name: str, track_path: str, app, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
         self.app = app
         self.vm = TrackPlayerViewModel(track_name, track_path)
+        self.is_closing = False
 
         self._setup_ui()
-        self._start_update_thread()
+        self._schedule_ui_updates()
 
     def _setup_ui(self):
         # Track label
@@ -27,7 +28,7 @@ class TrackPlayer(ctk.CTkFrame):
         self.loop_toggle.grid(row=0, column=2, padx=5)
 
         # Fade toggle
-        self.fade_toggle = ctk.CTkSwitch(self, text="Fade", command=self.toggle_fade)
+        self.fade_toggle = ctk.CTkSwitch(self, text="Fade", command=self.toggle_fade_mode)
         self.fade_toggle.grid(row=0, column=3, padx=5)
 
         # Close button
@@ -55,49 +56,58 @@ class TrackPlayer(ctk.CTkFrame):
         self.volume_label = ctk.CTkLabel(self, text="50%")
         self.volume_label.grid(row=2, column=3, padx=5)
 
-    def _start_update_thread(self):
-        self.update_thread = threading.Thread(target=self._update_ui, daemon=True)
-        self.update_thread.start()
-
-    def _update_ui(self):
-        while True:
-            self.after(100, self.update_progress_slider)
-            self.after(100, self.update_time_label)
-            self.after(100, self.update_play_button)
-            time.sleep(0.5)  # Reduced update frequency
+    def _schedule_ui_updates(self):
+        if self.is_closing or not self.winfo_exists():
+            return
+        
+        self.update_progress_slider()
+        self.update_time_label()
+        self.update_play_button()
+        
+        # Schedule the next update
+        self.after(100, self._schedule_ui_updates)
 
     def update_progress_slider(self):
+        if self.is_closing or not self.winfo_exists():
+            return
         position = self.vm.get_position()
-        self.progress_slider.set(position * 100)
+        if position is not None:
+            self.progress_slider.set(position * 100)
 
     def update_time_label(self):
-        current_pos = self.vm.get_position() * self.vm.get_duration()
-        duration = self.vm.get_duration()
-        current_str = time.strftime("%M:%S", time.gmtime(current_pos))
-        duration_str = time.strftime("%M:%S", time.gmtime(duration))
-        self.time_label.configure(text=f"{current_str} / {duration_str}")
+        if self.is_closing or not self.winfo_exists():
+            return
+        position = self.vm.get_position()
+        if position is not None:
+            current_pos = position * self.vm.get_duration()
+            duration = self.vm.get_duration()
+            current_str = time.strftime("%M:%S", time.gmtime(current_pos))
+            duration_str = time.strftime("%M:%S", time.gmtime(duration))
+            self.time_label.configure(text=f"{current_str} / {duration_str}")
 
     def update_play_button(self):
-        if self.vm.is_playing and not self.vm.is_paused:
+        if self.is_closing or not self.winfo_exists():
+            return
+        if self.vm.state in [PlayerState.PLAYING]:
             self.play_button.configure(text="Pause")
-        else:
+        elif self.vm.state in [PlayerState.PAUSED, PlayerState.STOPPED]:
             self.play_button.configure(text="Play")
 
     def toggle_play_pause(self):
-        if self.vm.is_playing:
-            if self.vm.is_paused:
-                self.vm.resume()
-            else:
-                self.vm.pause()
-        else:
+        if self.vm.state == PlayerState.PLAYING:
+            self.vm.pause()
+        elif self.vm.state in [PlayerState.PAUSED, PlayerState.STOPPED]:
             self.vm.play()
+        else:
+            # Handle other states if necessary
+            pass
+        self.update_play_button()
+
+    def toggle_fade_mode(self):
+        self.vm.set_fade_mode(self.fade_toggle.get())
 
     def on_slider_moved(self, value):
         logging.debug(f"Slider moved to {value}")
-        position = value / 100.0
-        self.vm.set_position(position)
-
-    def on_slider_released(self, value):
         position = value / 100.0
         self.vm.set_position(position)
 
@@ -106,13 +116,11 @@ class TrackPlayer(ctk.CTkFrame):
         self.vm.set_volume(volume)
         self.volume_label.configure(text=f"{int(value)}%")
 
-    def toggle_fade(self):
-        if self.fade_toggle.get():
-            self.vm.fade_in()
-        else:
-            self.vm.fade_out()
-
     def close_player(self):
-        self.vm.cleanup()
+        self.is_closing = True
+        # Allow scheduled updates to recognize the closing state
+        time.sleep(0.1)
+        # Perform cleanup in a separate thread to avoid blocking the UI
+        threading.Thread(target=self.vm.stop).start()
         self.destroy()
         self.app.remove_player(self.vm.track_name)
