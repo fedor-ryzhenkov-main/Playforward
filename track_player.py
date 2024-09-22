@@ -31,7 +31,7 @@ class TrackPlayer(ctk.CTkFrame):
         self.track_label = ctk.CTkLabel(self, text=self.track_name)
         self.track_label.grid(row=0, column=0, padx=5)
 
-        self.play_toggle = ctk.CTkSwitch(self, text="Play", command=self.play_pause)
+        self.play_toggle = ctk.CTkSwitch(self, text="Play", command=self.toggle_play_pause)
         self.play_toggle.grid(row=0, column=1, padx=5)
 
         self.loop_toggle = ctk.CTkSwitch(self, text="Loop", command=self.toggle_loop)
@@ -102,7 +102,7 @@ class TrackPlayer(ctk.CTkFrame):
             if not self.destroyed:
                 messagebox.showerror("Error", f"Error playing audio: {e}")
 
-    def play_pause(self):
+    def toggle_play_pause(self):
         if self.media_list_player:
             if self.is_playing:
                 self.media_list_player.pause()

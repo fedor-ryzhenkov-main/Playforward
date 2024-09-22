@@ -7,3 +7,4 @@ customtkinter
 numpy
 ffmpeg-normalize
 yt-dlp
+pyaudio
