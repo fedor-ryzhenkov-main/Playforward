@@ -10,16 +10,18 @@ import vlc
 from youtube_downloader import download_audio
 import queue
 import threading
+import shutil
 
 class AudioPlayerApp(ctk.CTk):
-    def __init__(self):
+    def __init__(self, base_path):
         super().__init__()
         self.title("Audio Manager")
         self.geometry("1200x800")
-        self.conn = init_db()
+        self.base_path = base_path
+        self.conn = init_db(self.base_path)
         self.players = {}
         self.setup_ui()
-        self.setup_custom_style()  # Add this line
+        self.setup_custom_style()
         self.load_items()
         self.download_queue = queue.Queue()
 
@@ -264,8 +266,11 @@ class AudioPlayerApp(ctk.CTk):
         if files:
             for file in files:
                 name = os.path.basename(file)
-                normalized_path = normalize_audio(file)
-                track_id = add_track(self.conn, name, file, normalized_path, "")
+                dest_path = os.path.join(self.base_path, 'uploads', name)
+                os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+                shutil.copy2(file, dest_path)
+                normalized_path = normalize_audio(dest_path, self.base_path)
+                track_id = add_track(self.conn, name, dest_path, normalized_path, "")
                 add_item(self.conn, name, 'track', None, track_id)
             self.load_items()
 
@@ -393,7 +398,7 @@ class AudioPlayerApp(ctk.CTk):
         youtube_url = simpledialog.askstring("YouTube Downloader", "Enter YouTube URL:")
         if youtube_url:
             try:
-                output_path = os.path.join(os.path.expanduser("~"), "Music", "YouTubeDownloads")
+                output_path = os.path.join(self.base_path, "YouTubeDownloads")
                 os.makedirs(output_path, exist_ok=True)
                 
                 # Show a progress dialog
@@ -409,7 +414,7 @@ class AudioPlayerApp(ctk.CTk):
                         
                         # Add the downloaded track to the database and UI
                         track_name = os.path.basename(downloaded_file)
-                        normalized_path = normalize_audio(downloaded_file)
+                        normalized_path = normalize_audio(downloaded_file, self.base_path)
                         track_id = add_track(self.conn, track_name, downloaded_file, normalized_path, "")
                         add_item(self.conn, track_name, 'track', None, track_id)
                         
@@ -458,5 +463,10 @@ class AudioPlayerApp(ctk.CTk):
         search_recursive()
 
 if __name__ == "__main__":
-    app = AudioPlayerApp()
+    import sys
+    if len(sys.argv) > 1:
+        base_path = sys.argv[1]
+    else:
+        base_path = os.path.expanduser("~/Music")
+    app = AudioPlayerApp(base_path)
     app.mainloop()

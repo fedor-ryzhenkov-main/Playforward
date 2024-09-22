@@ -4,16 +4,21 @@ on:
   push:
     tags:
       - 'v*' # Trigger on version tags
-  workflow_dispatch:
+  workflow_dispatch: # This enables manual triggering
 
 
 jobs:
   build:
-    name: Build ${{ matrix.os }}
+    name: Build ${{ matrix.os }} ${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
+        arch: [x64]
+        include:
+          - os: macos-latest
+            arch: arm64
 
     steps:
     - uses: actions/checkout@v3
@@ -36,12 +41,19 @@ jobs:
         pip install pyinstaller
 
     - name: Build with PyInstaller
-      run: pyinstaller --windowed --onefile --target-architecture=universal2 main.py
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+      run: |
+        if [ "${{ matrix.os }}" = "macos-latest" ] && [ "${{ matrix.arch }}" = "arm64" ]; then
+          pyinstaller --target-architecture universal2 --windowed --onefile main.py
+        else
+          pyinstaller --windowed --onefile main.py
+        fi
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ matrix.os }} Build
+        name: ${{ matrix.os }}-${{ matrix.arch }} Build
         path: dist/*
 
     - name: Create Release

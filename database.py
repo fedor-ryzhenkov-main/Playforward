@@ -1,8 +1,9 @@
 import sqlite3
 import os
 
-def init_db():
-    conn = sqlite3.connect('audio_manager.db')
+def init_db(base_path):
+    db_path = os.path.join(base_path, 'audio_manager.db')
+    conn = sqlite3.connect(db_path)
     conn.execute("PRAGMA foreign_keys = ON")  # Enable foreign key support
     cursor = conn.cursor()
     
