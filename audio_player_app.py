@@ -25,6 +25,12 @@ class AudioPlayerApp(ctk.CTk):
         self.load_items()
         self.download_queue = queue.Queue()
 
+        # Bind shortcuts
+        self.bind("<Command-f>", self.focus_search)  # For macOS
+        self.bind("<Control-f>", self.focus_search)  # For Windows/Linux
+        self.bind("<Command-p>", self.toggle_all_tracks)  # For macOS
+        self.bind("<Control-p>", self.toggle_all_tracks)  # For Windows/Linux
+
     def setup_ui(self):
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
@@ -426,7 +432,6 @@ class AudioPlayerApp(ctk.CTk):
                     finally:
                         self.after(0, lambda: progress_window.destroy())
                 
-                import threading
                 threading.Thread(target=download_thread, daemon=True).start()
                 
             except Exception as e:
@@ -461,6 +466,13 @@ class AudioPlayerApp(ctk.CTk):
                             self.add_track_to_tree(item, parent_tree_id)
         
         search_recursive()
+
+    def focus_search(self, event=None):
+        self.search_entry.focus_set()
+
+    def toggle_all_tracks(self, event=None):
+        for player in self.players.values():
+            player.play_pause()
 
 if __name__ == "__main__":
     import sys
