@@ -43,9 +43,13 @@ jobs:
     - name: Build with PyInstaller
       env:
         PYTHONPATH: ${{ github.workspace }}
+      shell: bash
       run: |
-        if [ "${{ matrix.os }}" = "macos-latest" ] && [ "${{ matrix.arch }}" = "arm64" ]; then
-          pyinstaller --target-architecture universal2 --windowed --onefile main.py
+        if [[ "${{ matrix.os }}" == "macos-latest" && "${{ matrix.arch }}" == "arm64" ]]; then
+          pip install --upgrade --force-reinstall --no-binary :all: charset_normalizer
+          pyinstaller --target-architecture arm64 --windowed --onefile main.py
+        elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+          pyinstaller --windowed --onefile main.py
         else
           pyinstaller --windowed --onefile main.py
         fi
