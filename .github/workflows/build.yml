@@ -36,7 +36,7 @@ jobs:
         pip install pyinstaller
 
     - name: Build with PyInstaller
-      run: pyinstaller --windowed main.py
+      run: pyinstaller --windowed --onefile --target-architecture=universal2 main.py
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
