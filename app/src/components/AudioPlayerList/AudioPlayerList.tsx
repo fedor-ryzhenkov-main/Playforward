@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { getAllAudioKeys, deleteAudioFromIndexedDB } from '../utils/audioStorage';
-import AudioPlayer from './AudioPlayer';
+import { getAllAudioKeys, deleteAudioFromIndexedDB } from '../../data/audioStorage';
+import AudioPlayer from '../AudioPlayer/AudioPlayer';
+import Track from '../../models/track';
 
 const AudioPlayerList: React.FC = () => {
-  const [tracks, setTracks] = useState<string[]>([]);
+  const [tracks, setTracks] = useState<Track[]>([]);
 
   useEffect(() => {
     loadTracks();
@@ -23,7 +24,7 @@ const AudioPlayerList: React.FC = () => {
     <div>
       <h2>Multi Audio Player</h2>
       {tracks.map((track) => (
-        <AudioPlayer key={track} trackKey={track} onClose={deleteTrack} />
+        <AudioPlayer key={track.id} trackKey={track.id} onClose={deleteTrack} />
       ))}
     </div>
   );

@@ -43,6 +43,7 @@
     ]
   },
   "devDependencies": {
-    "@types/howler": "^2.2.12"
+    "@types/howler": "^2.2.12",
+    "@types/uuid": "^10.0.0"
   }
 }

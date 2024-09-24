@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { saveAudioToIndexedDB } from '../utils/audioStorage';
+import { saveAudioToIndexedDB } from '../../data/audioStorage';
+import dbEventEmitter from '../../utils/events/eventEmitters';
 import './AudioUploader.css';
 
 const AudioUploader: React.FC = () => {
@@ -12,13 +13,14 @@ const AudioUploader: React.FC = () => {
       try {
         await saveAudioToIndexedDB(file);
         setUploadStatus('File uploaded successfully!');
+        dbEventEmitter.emit('databaseUpdated');
       } catch (error) {
         setUploadStatus('Error uploading file. Please try again.');
         console.error('Error uploading file:', error);
       }
     }
   };
-  
+
   return (
     <div className="audio-uploader">
       <input

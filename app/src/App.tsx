@@ -1,6 +1,6 @@
 import React from 'react';
-import AudioUploader from './components/AudioUploader';
-import TrackList from './components/TrackList';
+import AudioUploader from './components/AudioUploader/AudioUploader';
+import TrackList from './components/TrackList/TrackList';
 import './App.css';
 
 const App: React.FC = () => {

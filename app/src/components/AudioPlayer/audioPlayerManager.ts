@@ -1,5 +1,5 @@
 import { Howl } from 'howler';
-import { getAudioFromIndexedDB } from './audioStorage';
+import { getAudioFromIndexedDB } from '../../data/audioStorage';
 
 /**
  * Manages audio playback using Howler.js, including play/pause with fade-out to prevent popping,
@@ -24,15 +24,20 @@ export class audioPlayerManager {
    * Initializes the audio player by loading the track from IndexedDB.
    */
   async initialize(): Promise<void> {
-    const audioBlob = await getAudioFromIndexedDB(this.trackKey);
-    if (audioBlob) {
-      this.player = new Howl({
-        src: [URL.createObjectURL(audioBlob)],
-        format: ['mp3', 'wav'],
-        loop: this.isLooping,
-        onend: this.handleTrackEnd.bind(this),
-        onload: this.handleTrackLoad.bind(this),
-      });
+    const track = await getAudioFromIndexedDB(this.trackKey);
+    if (track) {
+      const audioBlob = new Blob([track.data], { type: track.type });
+      if (audioBlob) {
+        this.player = new Howl({
+          src: [URL.createObjectURL(audioBlob)],
+          format: ['mp3', 'wav'],
+          loop: this.isLooping,
+          onend: this.handleTrackEnd.bind(this),
+          onload: this.handleTrackLoad.bind(this),
+        });
+      } else {
+        console.error('Failed to load audio blob from IndexedDB.');
+      }
     } else {
       console.error('Failed to load audio blob from IndexedDB.');
     }
