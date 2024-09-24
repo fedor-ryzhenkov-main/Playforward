@@ -1,22 +1,30 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import Track from '../models/track';
+import Playlist from '../models/playlist'; // Add this line
 import dbEventEmitter from '../utils/events/eventEmitters';
 
 let db: IDBDatabase;
 
 const initDB = (): Promise<void> => {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('AudioDB', 1);
+    const request = indexedDB.open('AudioDB', 2); // Update version to 2
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
       db = request.result;
       resolve();
     };
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = (event) => {
       const db = request.result;
-      const store = db.createObjectStore('audioFiles', { keyPath: 'id' });
-      store.createIndex('name', 'name', { unique: false });
+      if (event.oldVersion < 1) {
+        const audioStore = db.createObjectStore('audioFiles', { keyPath: 'id' });
+        audioStore.createIndex('name', 'name', { unique: false });
+        audioStore.createIndex('playlistId', 'playlistId', { unique: false });
+      }
+      if (event.oldVersion < 2) {
+        const playlistStore = db.createObjectStore('playlists', { keyPath: 'id' });
+        playlistStore.createIndex('name', 'name', { unique: false });
+        playlistStore.createIndex('parentId', 'parentId', { unique: false });
+      }
     };
   });
 };
@@ -119,6 +127,38 @@ export const clearAllAudioFiles = async (): Promise<void> => {
     request.onsuccess = () => {
       dbEventEmitter.emit('databaseUpdated');
       resolve();
+    };
+  });
+};
+
+// Add functions to handle playlists
+export const savePlaylistToIndexedDB = async (name: string, parentId: string | null): Promise<void> => {
+  if (!db) await initDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['playlists'], 'readwrite');
+    const store = transaction.objectStore('playlists');
+    const request = store.put({
+      id: uuidv4(),
+      name,
+      parentId
+    });
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      dbEventEmitter.emit('databaseUpdated');
+      resolve();
+    };
+  });
+};
+
+export const getAllPlaylists = async (): Promise<Playlist[]> => {
+  if (!db) await initDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['playlists'], 'readonly');
+    const store = transaction.objectStore('playlists');
+    const request = store.getAll();
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      resolve(request.result);
     };
   });
 };

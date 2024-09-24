@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import AudioSlider from '../AudioSlider/AudioSlider';
+import AudioSlider from '../AudioSlider';
 import { audioPlayerManager } from './audioPlayerManager';
 import './AudioPlayer.css';
 
