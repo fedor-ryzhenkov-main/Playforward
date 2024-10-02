@@ -4,7 +4,7 @@ let db: IDBDatabase;
 
 const initDB = (): Promise<void> => {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('AudioDB', 2);
+    const request = indexedDB.open('libraryDatabase', 2);
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
       db = request.result;
@@ -13,19 +13,11 @@ const initDB = (): Promise<void> => {
     request.onupgradeneeded = (event) => {
       const db = request.result;
       if (event.oldVersion < 1) {
-        const audioStore = db.createObjectStore('tracks', { keyPath: 'id' });
-        audioStore.createIndex('name', 'name', { unique: false });
-        audioStore.createIndex('playlistId', 'playlistId', { unique: false });
-      }
-      if (event.oldVersion < 2) {
-        const playlistStore = db.createObjectStore('playlists', { keyPath: 'id' });
-        playlistStore.createIndex('name', 'name', { unique: false });
-        playlistStore.createIndex('parentId', 'parentId', { unique: false });
+        db.createObjectStore('libraryObjectStore', { keyPath: 'id' });
       }
     };
   });
 };
-
 const getDB = async (): Promise<IDBDatabase> => {
   if (!db) await initDB();
   return db;

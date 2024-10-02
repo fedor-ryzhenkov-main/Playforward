@@ -1,10 +1,10 @@
 import React from 'react';
 import { Container, Typography } from '@mui/material';
 import Grid from '@mui/material/Grid2';
-import TrackList from './components/TrackList/TrackList';
 import './App.css';
 import { AudioPlayerProvider } from './contexts/AudioPlayerContext';
 import { ContextMenuProvider } from './contexts/ContextMenuContext';
+import TrackListController from './components/TrackList/Controller';
 
 const App: React.FC = () => {
   return (
@@ -16,7 +16,7 @@ const App: React.FC = () => {
         <div style={{ width: '100%' }}>
           <ContextMenuProvider>
             <AudioPlayerProvider>
-              <TrackList />
+              <TrackListController />
             </AudioPlayerProvider>
           </ContextMenuProvider>
         </div>

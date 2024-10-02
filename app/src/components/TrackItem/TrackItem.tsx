@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useAudioPlayer } from '../../contexts/AudioPlayerContext';
 import Track from '../../data/models/Track';
-import { ContextMenuItem } from '../ContextMenu/ContextMenu';
-import TrackService from '../../data/services/TrackService';
 import './TrackItem.css';
 import { useContextMenuRegistration } from '../../contexts/ContextMenuContext';
 import MoveItemModal from '../MoveItemModal/MoveItemModal';
+import BaseService from '../../data/services/BaseService';
+import { BaseRepository } from '../../data/repositories/BaseRepository';
 
 interface TrackItemProps {
   track: Track;
@@ -13,7 +13,7 @@ interface TrackItemProps {
 
 const TrackItem: React.FC<TrackItemProps> = ({ track }) => {
   const { playTrack, stopTrack, isPlaying } = useAudioPlayer();
-  const trackService = new TrackService();
+  const baseService = new BaseService(new BaseRepository<Track>('libraryObjectStore'));
   const { registerMenuItems } = useContextMenuRegistration();
   const [isMoveModalOpen, setMoveModalOpen] = useState(false);
 
@@ -76,7 +76,7 @@ const TrackItem: React.FC<TrackItemProps> = ({ track }) => {
     const confirmDelete = window.confirm(`Are you sure you want to delete "${track.name}"?`);
     if (confirmDelete) {
       try {
-        await trackService.deleteTrack(track.id);
+        await baseService.deleteItem(track.id);
       } catch (error) {
         console.error('Error deleting track:', error);
         alert('Failed to delete track.');
@@ -88,7 +88,7 @@ const TrackItem: React.FC<TrackItemProps> = ({ track }) => {
     const newName = prompt('Enter new track name:', track.name);
     if (newName && newName.trim() !== '') {
       try {
-        await trackService.renameTrack(track.id, newName.trim());
+        await baseService.updateItem({...track, name: newName.trim()});
         alert('Track renamed successfully!');
       } catch (error) {
         console.error('Error renaming track:', error);
@@ -102,7 +102,7 @@ const TrackItem: React.FC<TrackItemProps> = ({ track }) => {
     if (newTags !== null) {
       const tagsArray = newTags.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
       try {
-        await trackService.updateTrackTags(track.id, tagsArray);
+        //await baseService.updateItem({...track, tags: tagsArray});
         alert('Tags updated successfully!');
       } catch (error) {
         console.error('Error updating tags:', error);
@@ -115,7 +115,7 @@ const TrackItem: React.FC<TrackItemProps> = ({ track }) => {
     const newDescription = prompt('Enter new description:', track.description || '');
     if (newDescription !== null) {
       try {
-        await trackService.updateTrackDescription(track.id, newDescription.trim());
+        //await baseService.updateItem({...track, description: newDescription.trim()});
         alert('Description updated successfully!');
       } catch (error) {
         console.error('Error updating description:', error);

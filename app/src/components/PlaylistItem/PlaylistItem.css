@@ -14,3 +14,10 @@
   cursor: pointer;
   color: #fff;
 }
+
+.playlist-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-left: 2rem;
+}

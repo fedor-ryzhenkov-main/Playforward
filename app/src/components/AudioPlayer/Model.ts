@@ -1,6 +1,9 @@
 import { Howl } from 'howler';
 import { AudioPlayerState, AudioPlayerController } from './Interfaces';
-import TrackService from '../../data/services/TrackService';
+import BaseService from '../../data/services/BaseService';
+import { BaseRepository } from '../../data/repositories/BaseRepository';
+import LibraryItem from '../../data/models/LibraryItem';
+import Track from '../../data/models/Track';
 
 /**
  * Manages audio playback using Howler.js, including play/pause with fade-out to prevent popping,
@@ -21,7 +24,7 @@ class AudioPlayerModel implements AudioPlayerController, AudioPlayerState {
   constructor(
     private trackKey: string,
     private onStateUpdate: (state: Partial<AudioPlayerState>) => void,
-    private trackService: TrackService
+    private baseService: BaseService
   ) {}
 
   // Add this method to update the state and notify the controller
@@ -34,7 +37,7 @@ class AudioPlayerModel implements AudioPlayerController, AudioPlayerState {
    * Initializes the audio player by loading the track from IndexedDB.
    */
   async initialize(): Promise<void> {
-    const track = await this.trackService.getTrack(this.trackKey);
+    const track = await this.baseService.getItem(this.trackKey) as Track;
     if (track) {
       const audioBlob = new Blob([track.data], { type: track.type });
       if (audioBlob) {

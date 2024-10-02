@@ -1,8 +1,9 @@
-import Track from "./Track";
+import LibraryItem from './LibraryItem';
 
-export default interface Playlist {
-  id: string;
-  name: string;
-  parentId?: string;
-  items: (Track | Playlist)[];
+/**
+ * Represents a playlist containing tracks or other playlists.
+ */
+export default interface Playlist extends LibraryItem {
+  type: 'playlist';
+  items: string[]; // IDs of child items
 }

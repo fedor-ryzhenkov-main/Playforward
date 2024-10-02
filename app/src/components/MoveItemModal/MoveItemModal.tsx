@@ -2,30 +2,37 @@ import React, { useState, useEffect } from 'react';
 import './MoveItemModal.css';
 import Track from '../../data/models/Track';
 import Playlist from '../../data/models/Playlist';
-import PlaylistService from '../../data/services/PlaylistService';
-import TrackService from '../../data/services/TrackService';
+import LibraryItem from '../../data/models/LibraryItem';
+import BaseService from '../../data/services/BaseService';
+import { BaseRepository } from '../../data/repositories/BaseRepository';
 
 interface MoveItemModalProps {
-  item: Track | Playlist;
+  item: LibraryItem;
   onClose: () => void;
   onMove: () => void;
 }
 
-const MoveItemModal: React.FC<MoveItemModalProps> = ({ item, onClose, onMove }) => {
+/**
+ * Modal component for moving an item (track or playlist) to a different playlist.
+ */
+const MoveItemModal: React.FC<MoveItemModalProps> = ({
+  item,
+  onClose,
+  onMove,
+}) => {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [filteredPlaylists, setFilteredPlaylists] = useState<Playlist[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const playlistService = new PlaylistService();
-  const trackService = new TrackService();
+  const baseService = new BaseService(new BaseRepository<LibraryItem>('libraryObjectStore'));
 
   useEffect(() => {
     const loadPlaylists = async () => {
-      const allPlaylists = await playlistService.getAllPlaylists();
+      const allPlaylists = await baseService.getAllItems('playlist') as Playlist[];
       setPlaylists(allPlaylists);
       setFilteredPlaylists(allPlaylists);
     };
     loadPlaylists();
-  }, [playlistService]);
+  }, [baseService]);
 
   useEffect(() => {
     if (searchTerm.trim() === '') {
@@ -41,56 +48,31 @@ const MoveItemModal: React.FC<MoveItemModalProps> = ({ item, onClose, onMove }) 
 
   const handleMove = async (playlistId?: string) => {
     try {
-      item.parentId = playlistId;
-
-      if (isTrack(item)) {
-        await trackService.updateTrack(item);
-      } else if (isPlaylist(item)) {
-        await playlistService.updatePlaylist(item);
-      }
-
-      onMove(); // Notify parent component to refresh if needed
+      await baseService.updateItem({...item, parentId: playlistId});
+      onMove();
     } catch (error) {
       console.error('Error moving item:', error);
       alert('Failed to move item.');
     }
   };
 
-  // Type guard to check if item is a Track
-  function isTrack(item: any): item is Track {
-    return (item as Track).data !== undefined; // Replace with an actual property unique to Track
-  }
-
-  // Type guard to check if item is a Playlist
-  function isPlaylist(item: any): item is Playlist {
-    return (item as Playlist).items !== undefined;
-  }
-
-  const renderPlaylistTree = (playlists: Playlist[], parentId?: string, path: string = '') => {
-    return playlists
-      .filter((playlist) => playlist.parentId === parentId)
-      .map((playlist) => {
-        const fullPath = path ? `${path} / ${playlist.name}` : playlist.name;
-        return (
-          <div key={playlist.id} className="playlist-item">
-            <div
-              className="playlist-path"
-              onClick={() => handleMove(playlist.id)}
-            >
-              {fullPath}
-            </div>
-            <div className="playlist-children">
-              {renderPlaylistTree(playlists, playlist.id, fullPath)}
-            </div>
-          </div>
-        );
-      });
+  const renderPlaylistTree = (): React.ReactNode => {
+    return filteredPlaylists.map((playlist) => (
+      <div key={playlist.id} className="playlist-item">
+        <div
+          className="playlist-path"
+          onClick={() => handleMove(playlist.id)}
+        >
+          {playlist.name}
+        </div>
+      </div>
+    ));
   };
 
   return (
     <div className="modal-overlay">
-      <div className="move-track-modal">
-        <h2>Move Track to Playlist</h2>
+      <div className="move-item-modal">
+        <h2>Move Item to Playlist</h2>
         <input
           type="text"
           placeholder="Search Playlists"
@@ -99,14 +81,11 @@ const MoveItemModal: React.FC<MoveItemModalProps> = ({ item, onClose, onMove }) 
         />
         <div className="playlist-tree">
           <div className="playlist-item">
-            <div
-              className="playlist-path"
-              onClick={() => handleMove(undefined)}
-            >
+            <div className="playlist-path" onClick={() => handleMove(undefined)}>
               No Playlist
             </div>
           </div>
-          {renderPlaylistTree(filteredPlaylists)}
+          {renderPlaylistTree()}
         </div>
         <button onClick={onClose}>Cancel</button>
       </div>

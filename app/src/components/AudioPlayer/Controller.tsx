@@ -3,7 +3,9 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import AudioPlayerView from './View';
 import AudioPlayerModel from './Model';
 import { AudioPlayerState } from './Interfaces';
-import TrackService from '../../data/services/TrackService';
+import BaseService from '../../data/services/BaseService';
+import { BaseRepository } from '../../data/repositories/BaseRepository';
+import LibraryItem from '../../data/models/LibraryItem';
 
 interface AudioPlayerControllerProps {
   trackId: string;
@@ -21,7 +23,7 @@ const AudioPlayerController: React.FC<AudioPlayerControllerProps> = ({ trackId, 
     isFadeEffectActive: false,
   });
 
-  const trackService = useRef(new TrackService()).current;
+  const baseService = useRef(new BaseService(new BaseRepository<LibraryItem>('libraryObjectStore'))).current;
 
   const handleModelUpdates = useCallback((state: Partial<AudioPlayerState>) => {
     setPlayerState(prevState => ({
@@ -31,14 +33,14 @@ const AudioPlayerController: React.FC<AudioPlayerControllerProps> = ({ trackId, 
   }, []);
 
   useEffect(() => {
-    const modelInstance = new AudioPlayerModel(trackId, handleModelUpdates, trackService);
+    const modelInstance = new AudioPlayerModel(trackId, handleModelUpdates, baseService);
     setModel(modelInstance);
     modelInstance.initialize();
 
     return () => {
       modelInstance.close();
     };
-  }, [trackId, handleModelUpdates, trackService]);
+  }, [trackId, handleModelUpdates, baseService]);
 
   const handlePlayPause = useCallback(() => model?.togglePlayPause(), [model]);
   const handleSeek = useCallback((time: number) => model?.seek(time), [model]);

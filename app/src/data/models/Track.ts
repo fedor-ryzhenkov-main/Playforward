@@ -1,9 +1,11 @@
-export default interface Track {
-  id: string;
-  name: string;
+import LibraryItem from './LibraryItem';
+
+/**
+ * Represents a music track.
+ */
+export default interface Track extends LibraryItem {
+  type: 'track';
   data: ArrayBuffer;
-  type: string;
   tags: string[];
   description?: string;
-  parentId?: string; 
 }

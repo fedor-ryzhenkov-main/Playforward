@@ -1,39 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import Playlist from '../../data/models/Playlist';
-import Track from '../../data/models/Track';
-import TrackItem from './TrackItem';
 import { FaChevronRight, FaChevronDown } from 'react-icons/fa';
 import { useContextMenuRegistration } from '../../contexts/ContextMenuContext';
-import PlaylistService from '../../data/services/PlaylistService';
 import MoveItemModal from '../MoveItemModal/MoveItemModal';
-import './PlaylistItem.css';
+import TrackItem from '../TrackItem/TrackItem';
+import LibraryItem from '../../data/models/LibraryItem';
+import Track from '../../data/models/Track';
+import { ResolvedPlaylist } from '../TrackList/Model'; // Import ResolvedPlaylist
 
 interface PlaylistItemProps {
-  playlist: Playlist;
-  tracks: Track[];
-  subPlaylists: Playlist[];
+  playlist: ResolvedPlaylist; // Use ResolvedPlaylist
 }
 
 /**
- * Component representing a single playlist item, which can be toggled to show or hide its tracks and sub-playlists.
+ * Component representing a single playlist item, which can be toggled to show or hide its contents.
  */
-const PlaylistItem: React.FC<PlaylistItemProps> = ({ playlist, tracks, subPlaylists }) => {
+const PlaylistItem: React.FC<PlaylistItemProps> = ({ playlist }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { registerMenuItems } = useContextMenuRegistration();
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
-  const playlistService = new PlaylistService();
 
   const toggleOpen = () => {
     setIsOpen(!isOpen);
   };
 
-  const childPlaylists = subPlaylists.filter((p) => p.parentId === playlist.id);
-  const playlistTracks = tracks.filter((t) => t.parentId === playlist.id);
-
   useEffect(() => {
     const handleAggregateContextMenu = (event: Event) => {
       const customEvent = event as CustomEvent;
-      if (customEvent.detail && typeof customEvent.detail.registerMenuItems === 'function') {
+      if (
+        customEvent.detail &&
+        typeof customEvent.detail.registerMenuItems === 'function'
+      ) {
         customEvent.detail.registerMenuItems([
           {
             label: 'Move Playlist',
@@ -41,6 +37,7 @@ const PlaylistItem: React.FC<PlaylistItemProps> = ({ playlist, tracks, subPlayli
               handleMovePlaylist();
             },
           },
+          // Add other context menu items if needed
         ]);
       }
     };
@@ -49,12 +46,27 @@ const PlaylistItem: React.FC<PlaylistItemProps> = ({ playlist, tracks, subPlayli
     element?.addEventListener('contextmenu-aggregate', handleAggregateContextMenu);
 
     return () => {
-      element?.removeEventListener('contextmenu-aggregate', handleAggregateContextMenu);
+      element?.removeEventListener(
+        'contextmenu-aggregate',
+        handleAggregateContextMenu
+      );
     };
   }, [registerMenuItems, playlist]);
 
   const handleMovePlaylist = () => {
     setIsMoveModalOpen(true);
+  };
+
+  const renderItems = (): React.ReactNode => {
+    return playlist.items.map((item) => {
+      if (item.type === 'playlist') {
+        return <PlaylistItem key={item.id} playlist={item as ResolvedPlaylist} />;
+      } else if (item.type === 'track') {
+        return <TrackItem key={item.id} track={item as Track} />;
+      } else {
+        return null;
+      }
+    });
   };
 
   return (
@@ -65,17 +77,7 @@ const PlaylistItem: React.FC<PlaylistItemProps> = ({ playlist, tracks, subPlayli
       </div>
       {isOpen && (
         <div className="playlist-content">
-          {childPlaylists.map((subPlaylist) => (
-            <PlaylistItem
-              key={subPlaylist.id}
-              playlist={subPlaylist}
-              tracks={tracks}
-              subPlaylists={subPlaylists}
-            />
-          ))}
-          {playlistTracks.map((track) => (
-            <TrackItem key={track.id} track={track} />
-          ))}
+          {renderItems()}
         </div>
       )}
       {isMoveModalOpen && (
