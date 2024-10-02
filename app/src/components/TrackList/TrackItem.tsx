@@ -139,10 +139,14 @@ const TrackItem: React.FC<TrackItemProps> = ({ track }) => {
           onClick={handleClick}
         >
           <div className="track-details">
+
+            <div className="track-main-info">
             <span className="track-name">{track.name}</span>
             {track.description && (
               <span className="track-description">{track.description}</span>
             )}
+            </div>
+            <div>
             {track.tags && track.tags.length > 0 && (
               <div className="track-tags">
                 {track.tags.map((tag) => (
@@ -152,6 +156,7 @@ const TrackItem: React.FC<TrackItemProps> = ({ track }) => {
                 ))}
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>

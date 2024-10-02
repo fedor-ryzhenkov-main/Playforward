@@ -6,7 +6,7 @@ import { FaChevronRight, FaChevronDown } from 'react-icons/fa';
 import { useContextMenuRegistration } from '../../contexts/ContextMenuContext';
 import PlaylistService from '../../data/services/PlaylistService';
 import MoveItemModal from '../MoveItemModal/MoveItemModal';
-import { ContextMenuItem } from '../ContextMenu/ContextMenu';
+import './PlaylistItem.css';
 
 interface PlaylistItemProps {
   playlist: Playlist;

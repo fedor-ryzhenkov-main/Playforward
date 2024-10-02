@@ -157,6 +157,9 @@ const TrackList: React.FC = () => {
       <div className="track-list">
         {renderTreeNodes(filteredTree)}
       </div>
+      <div className="context-menu-hint">
+          Click with the right button to open context menu
+      </div>
     </div>
   );
 };

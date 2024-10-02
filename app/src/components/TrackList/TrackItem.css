@@ -9,7 +9,8 @@
 .track-info {
   cursor: pointer;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  width: 100%;
 }
 
 .track-info.playing {
@@ -20,9 +21,17 @@
   background-color: rgba(76, 175, 80, 0.1);
 }
 
-.track-details {
+.track-main-info {
   display: flex;
   flex-direction: column;
+}
+
+.track-details {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 3rem;
 }
 
 .track-name {
