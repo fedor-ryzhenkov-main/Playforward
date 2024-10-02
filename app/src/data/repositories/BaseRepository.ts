@@ -1,6 +1,7 @@
 // app/src/data/repositories/BaseRepository.ts
 import { getDB } from '../database/Database';
 import { IRepository } from './Interfaces';
+import EventDispatcher from '../events/EventDispatcher';
 
 /**
  * Generic base repository for handling common IndexedDB operations.
@@ -20,7 +21,10 @@ export class BaseRepository<T extends { id: string }> implements IRepository<T> 
       const store = transaction.objectStore(this.storeName);
       const request = store.add(item);
       request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve();
+      request.onsuccess = () => {
+        EventDispatcher.getInstance().emit('dataChanged', { action: 'add', item });
+        resolve();
+      };
     });
   }
 
@@ -31,7 +35,11 @@ export class BaseRepository<T extends { id: string }> implements IRepository<T> 
       const store = transaction.objectStore(this.storeName);
       const request = store.put(item);
       request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve();
+      request.onsuccess = () => {
+        EventDispatcher.getInstance().emit('dataChanged', { action: 'update', item });
+        resolve();
+      };
+
     });
   }
 
@@ -42,7 +50,10 @@ export class BaseRepository<T extends { id: string }> implements IRepository<T> 
       const store = transaction.objectStore(this.storeName);
       const request = store.delete(id);
       request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve();
+      request.onsuccess = () => {
+        EventDispatcher.getInstance().emit('dataChanged', { action: 'delete', id });
+        resolve();
+      };
     });
   }
 
@@ -53,7 +64,10 @@ export class BaseRepository<T extends { id: string }> implements IRepository<T> 
       const store = transaction.objectStore(this.storeName);
       const request = store.get(id);
       request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result || null);
+      request.onsuccess = () => {
+        EventDispatcher.getInstance().emit('dataChanged', { action: 'getById', id });
+        resolve(request.result || null);
+      };
     });
   }
 
@@ -64,7 +78,10 @@ export class BaseRepository<T extends { id: string }> implements IRepository<T> 
       const store = transaction.objectStore(this.storeName);
       const request = store.getAll();
       request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result as T[]);
+      request.onsuccess = () => {
+        EventDispatcher.getInstance().emit('dataChanged', { action: 'getAll' });
+        resolve(request.result as T[]);
+      };
     });
   }
 }

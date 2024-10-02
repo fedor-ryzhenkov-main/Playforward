@@ -1,0 +1,22 @@
+.audio-player-manager {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #2a2a2a;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    overflow-y: auto;
+    max-height: 40vh;
+    z-index: 1000; /* Ensure it stays above other elements */
+  }
+  
+  /* Optional: Add responsive styling */
+  @media (max-width: 600px) {
+    .audio-player-manager {
+      max-height: 50vh;
+      padding: 0.5rem;
+    }
+  }

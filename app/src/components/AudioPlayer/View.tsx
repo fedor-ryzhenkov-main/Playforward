@@ -33,7 +33,7 @@ const AudioPlayerView: React.FC<AudioPlayerViewProps> = ({
             type="range"
             min="0"
             max="1"
-            step="0.1"
+            step="0.0005"
             value={volume}
             onChange={(e) => onVolumeChange(Number(e.target.value))}
             className="volume-slider"

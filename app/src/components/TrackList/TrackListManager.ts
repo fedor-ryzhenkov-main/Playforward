@@ -3,7 +3,6 @@ import TrackService from '../../data/services/TrackService';
 import PlaylistService from '../../data/services/PlaylistService';
 import Track from '../../data/models/Track';
 import Playlist from '../../data/models/Playlist';
-import { removeFileExtension } from '../../utils/files/removeFileExtension';
 
 export interface TreeNode {
   id: string;
@@ -18,8 +17,8 @@ export interface TreeNode {
 export default class TrackListManager {
   private trackService: TrackService;
   private playlistService: PlaylistService;
-  private tracks: Track[] = [];
-  private playlists: Playlist[] = [];
+  public tracks: Track[] = [];
+  public playlists: Playlist[] = [];
   private searchName: string = '';
   private searchTags: string = '';
 
@@ -103,7 +102,7 @@ export default class TrackListManager {
    */
   getFilteredTree(): TreeNode[] {
     const filterByNameAndTags = (track: Track): boolean => {
-      const nameMatch = removeFileExtension(track.name)
+      const nameMatch = track.name
         .toLowerCase()
         .includes(this.searchName.toLowerCase());
       const tagsMatch =
@@ -115,19 +114,20 @@ export default class TrackListManager {
     };
 
     const filterTree = (nodes: TreeNode[]): TreeNode[] => {
-      return nodes
-        .map((node) => {
-          if (node.type === 'track') {
-            const track = node.data as Track;
-            return filterByNameAndTags(track) ? node : null;
-          } else {
-            const filteredChildren = filterTree(node.children);
-            return filteredChildren.length > 0
-              ? { ...node, children: filteredChildren }
-              : null;
+      return nodes.map((node) => {
+        if (node.type === 'track') {
+          const track = node.data as Track;
+          return filterByNameAndTags(track) ? node : null;
+        } else {
+          const playlist = node.data as Playlist;
+          const nameMatch = playlist.name.toLowerCase().includes(this.searchName.toLowerCase());
+          const filteredChildren = filterTree(node.children);
+          if (nameMatch || filteredChildren.length > 0) {
+            return { ...node, children: filteredChildren };
           }
-        })
-        .filter((node): node is TreeNode => node !== null);
+          return null;
+        }
+      }).filter((node): node is TreeNode => node !== null);
     };
 
     const tree = this.buildTree();

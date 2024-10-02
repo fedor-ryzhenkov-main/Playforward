@@ -1,17 +1,16 @@
 // app/src/components/AudioPlayer/Controller.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import AudioPlayerView from './View';
 import AudioPlayerModel from './Model';
-import AudioPlayerView from './View'; // Ensure this is the correct import
-import TrackService from '../../data/services/TrackService';
 import { AudioPlayerState } from './Interfaces';
+import TrackService from '../../data/services/TrackService';
 
 interface AudioPlayerControllerProps {
-  trackKey: string;
-  service: TrackService;
+  trackId: string;
   onClose: () => void;
 }
 
-const AudioPlayerController: React.FC<AudioPlayerControllerProps> = ({ trackKey, service, onClose }) => {
+const AudioPlayerController: React.FC<AudioPlayerControllerProps> = ({ trackId, onClose }) => {
   const [model, setModel] = useState<AudioPlayerModel | null>(null);
   const [playerState, setPlayerState] = useState<AudioPlayerState>({
     isPlaying: false,
@@ -22,51 +21,34 @@ const AudioPlayerController: React.FC<AudioPlayerControllerProps> = ({ trackKey,
     isFadeEffectActive: false,
   });
 
-  // Callback passed to the model to handle state updates
-  const handleModelUpdates = (state: Partial<AudioPlayerState>) => {
+  const trackService = useRef(new TrackService()).current;
+
+  const handleModelUpdates = useCallback((state: Partial<AudioPlayerState>) => {
     setPlayerState(prevState => ({
       ...prevState,
       ...state,
     }));
-  };
+  }, []);
 
-  // Initialize the model when the component mounts
   useEffect(() => {
-    const modelInstance = new AudioPlayerModel(trackKey, handleModelUpdates, service);
+    const modelInstance = new AudioPlayerModel(trackId, handleModelUpdates, trackService);
     setModel(modelInstance);
     modelInstance.initialize();
 
-    // Clean up when the component unmounts
     return () => {
       modelInstance.close();
     };
-  }, [trackKey]);
+  }, [trackId, handleModelUpdates, trackService]);
 
-  // Event handlers that call the model's methods
-  const handlePlayPause = () => {
-    model?.togglePlayPause();
-  };
-
-  const handleSeek = (time: number) => {
-    model?.seek(time);
-  };
-
-  const handleVolumeChange = (volume: number) => {
-    model?.setVolume(volume);
-  };
-
-  const handleToggleLoop = () => {
-    model?.toggleLoop();
-  };
-
-  const handleToggleFadeEffect = () => {
-    model?.toggleFadeEffect();
-  };
-
-  const handleClose = () => {
+  const handlePlayPause = useCallback(() => model?.togglePlayPause(), [model]);
+  const handleSeek = useCallback((time: number) => model?.seek(time), [model]);
+  const handleVolumeChange = useCallback((volume: number) => model?.setVolume(volume), [model]);
+  const handleToggleLoop = useCallback(() => model?.toggleLoop(), [model]);
+  const handleToggleFadeEffect = useCallback(() => model?.toggleFadeEffect(), [model]);
+  const handleClose = useCallback(() => {
     model?.close();
     onClose();
-  };
+  }, [model, onClose]);
 
   return (
     <AudioPlayerView
@@ -81,4 +63,4 @@ const AudioPlayerController: React.FC<AudioPlayerControllerProps> = ({ trackKey,
   );
 };
 
-export default AudioPlayerController;
+export default React.memo(AudioPlayerController);

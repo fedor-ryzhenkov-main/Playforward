@@ -1,10 +1,10 @@
 import React from 'react';
 import { Container, Typography } from '@mui/material';
 import Grid from '@mui/material/Grid2';
-import AudioUploader from './components/AudioUploader/AudioUploader';
-import CreatePlaylist from './components/CreatePlaylist/CreatePlaylist';
 import TrackList from './components/TrackList/TrackList';
 import './App.css';
+import { AudioPlayerProvider } from './contexts/AudioPlayerContext';
+import { ContextMenuProvider } from './contexts/ContextMenuContext';
 
 const App: React.FC = () => {
   return (
@@ -13,13 +13,12 @@ const App: React.FC = () => {
         Playforward
       </Typography>
       <Grid container flexDirection="column" spacing={3} justifyContent="center" alignItems="center">
-        <Grid container justifyContent="center">
-          <CreatePlaylist />
-          <AudioUploader />
-        </Grid>
-        
         <div style={{ width: '100%' }}>
-          <TrackList />
+          <ContextMenuProvider>
+            <AudioPlayerProvider>
+              <TrackList />
+            </AudioPlayerProvider>
+          </ContextMenuProvider>
         </div>
       </Grid>
     </Container>

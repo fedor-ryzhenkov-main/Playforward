@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Track from '../../data/models/Track';
 import TrackService from '../../data/services/TrackService';
-import { removeFileExtension } from '../../utils/files/removeFileExtension';
 import './EditTrackPopup.css';
 
 interface EditTrackPopupProps {
@@ -11,14 +10,14 @@ interface EditTrackPopupProps {
 }
 
 const EditTrackPopup: React.FC<EditTrackPopupProps> = ({ track, onClose, onUpdate }) => {
-  const [name, setName] = useState(removeFileExtension(track.name));
+  const [name, setName] = useState(track.name);
   const [tags, setTags] = useState(track.tags.join(', '));
   const [description, setDescription] = useState(track.description || '');
   const trackService = new TrackService();
 
   // Synchronize local state with track props only when the component mounts or track.id changes
   useEffect(() => {
-    setName(removeFileExtension(track.name));
+    setName(track.name);
     setTags(track.tags.join(', '));
     setDescription(track.description || '');
   }, [track.id, track.name, track.tags, track.description]);
