@@ -4,7 +4,6 @@ import LibraryItem from '../../data/models/LibraryItem';
 import BaseService, { ResolvedPlaylist } from '../../data/services/BaseService';
 import { BaseRepository } from '../../data/repositories/BaseRepository';
 import EventDispatcher from '../../data/events/EventDispatcher';
-
 /**
  * Manages the track and playlist tree structure.
  */

@@ -37,8 +37,22 @@ export default class BaseService {
     await this.repository.add(item);
   }
 
+  /**
+   * Deletes an item and its children recursively.
+   * @param id The ID of the item to delete.
+   */
   async deleteItem(id: string): Promise<void> {
-    await this.repository.delete(id);
+    const item = await this.repository.getById(id);
+    if (item) {
+      // If the item is a playlist, delete its children recursively
+      if (item.type === 'playlist') {
+        const playlist = item as Playlist;
+        for (const childId of playlist.items) {
+          await this.deleteItem(childId);
+        }
+      }
+      await this.repository.delete(id);
+    }
   }
 
   /**

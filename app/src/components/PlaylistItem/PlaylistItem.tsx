@@ -5,7 +5,11 @@ import MoveItemModal from '../MoveItemModal/MoveItemModal';
 import TrackItem from '../TrackItem/TrackItem';
 import Track from '../../data/models/Track';
 import { ResolvedPlaylist } from '../../data/services/BaseService';
+import BaseService from '../../data/services/BaseService';
 import './PlaylistItem.css';
+import Playlist from '../../data/models/Playlist';
+import { BaseRepository } from '../../data/repositories/BaseRepository';
+
 
 interface PlaylistItemProps {
   playlist: ResolvedPlaylist; // Use ResolvedPlaylist
@@ -18,6 +22,7 @@ const PlaylistItem: React.FC<PlaylistItemProps> = React.memo(({ playlist }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { registerMenuItems } = useContextMenuRegistration();
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+  const baseService = new BaseService(new BaseRepository<Playlist>('libraryObjectStore'));
 
   const toggleOpen = () => {
     setIsOpen(!isOpen);
@@ -37,7 +42,12 @@ const PlaylistItem: React.FC<PlaylistItemProps> = React.memo(({ playlist }) => {
               handleMovePlaylist();
             },
           },
-          // Add other context menu items if needed
+          {
+            label: 'Delete Playlist',
+            onClick: () => {
+              handleDeletePlaylist();
+            },
+          }
         ]);
       }
     };
@@ -55,6 +65,10 @@ const PlaylistItem: React.FC<PlaylistItemProps> = React.memo(({ playlist }) => {
 
   const handleMovePlaylist = () => {
     setIsMoveModalOpen(true);
+  };
+
+  const handleDeletePlaylist = () => {
+    baseService.deleteItem(playlist.id);
   };
 
   const renderItems = (): React.ReactNode => {
