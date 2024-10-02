@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import Track from '../../models/track';
-import { updateTrack } from '../../data/storageAudio';
+import Track from '../../data/models/Track';
+import TrackService from '../../data/services/TrackService';
 import { removeFileExtension } from '../../utils/files/removeFileExtension';
 import './EditTrackPopup.css';
 
@@ -14,6 +14,7 @@ const EditTrackPopup: React.FC<EditTrackPopupProps> = ({ track, onClose, onUpdat
   const [name, setName] = useState(removeFileExtension(track.name));
   const [tags, setTags] = useState(track.tags.join(', '));
   const [description, setDescription] = useState(track.description || '');
+  const trackService = new TrackService();
 
   // Synchronize local state with track props only when the component mounts or track.id changes
   useEffect(() => {
@@ -29,8 +30,13 @@ const EditTrackPopup: React.FC<EditTrackPopupProps> = ({ track, onClose, onUpdat
     // Append the original file extension
     const updatedName = newName + getFileExtension(track.name);
 
+    track = {
+      ...track,
+      name: updatedName,
+    };
+
     // Update the database
-    await updateTrack(track.id, updatedName, track.tags, track.description);
+    await trackService.updateTrack(track);
 
     // Notify parent component
     onUpdate();
@@ -43,8 +49,13 @@ const EditTrackPopup: React.FC<EditTrackPopupProps> = ({ track, onClose, onUpdat
     // Process tags into an array
     const updatedTags = newTags.split(',').map(tag => tag.trim()).filter(tag => tag);
 
+    track = {
+      ...track,
+      tags: updatedTags,
+    };
+
     // Update the database
-    await updateTrack(track.id, track.name, updatedTags, track.description);
+    await trackService.updateTrack(track);
 
     // Notify parent component
     onUpdate();
@@ -54,8 +65,13 @@ const EditTrackPopup: React.FC<EditTrackPopupProps> = ({ track, onClose, onUpdat
     const newDescription = e.target.value;
     setDescription(newDescription);
 
+    track = {
+      ...track,
+      description: newDescription,
+    };
+
     // Update the database
-    await updateTrack(track.id, track.name, track.tags, newDescription);
+    await trackService.updateTrack(track);
 
     // Notify parent component
     onUpdate();

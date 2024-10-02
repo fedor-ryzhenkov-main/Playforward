@@ -1,5 +1,4 @@
 import { v4 as uuidv4 } from 'uuid';
-import dbEventEmitter from '../utils/events/eventEmitters';
 
 let db: IDBDatabase;
 
@@ -14,7 +13,7 @@ const initDB = (): Promise<void> => {
     request.onupgradeneeded = (event) => {
       const db = request.result;
       if (event.oldVersion < 1) {
-        const audioStore = db.createObjectStore('audioFiles', { keyPath: 'id' });
+        const audioStore = db.createObjectStore('tracks', { keyPath: 'id' });
         audioStore.createIndex('name', 'name', { unique: false });
         audioStore.createIndex('playlistId', 'playlistId', { unique: false });
       }
@@ -32,8 +31,4 @@ const getDB = async (): Promise<IDBDatabase> => {
   return db;
 };
 
-const emitDatabaseUpdated = () => {
-  dbEventEmitter.emit('databaseUpdated');
-};
-
-export { getDB, emitDatabaseUpdated, uuidv4 };
+export { getDB, uuidv4 };

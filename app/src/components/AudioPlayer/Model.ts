@@ -1,30 +1,40 @@
 import { Howl } from 'howler';
-import { getTrackFromIndexedDB } from '../../data/storageAudio';
+import { AudioPlayerState, AudioPlayerController } from './Interfaces';
+import TrackService from '../../data/services/TrackService';
 
 /**
  * Manages audio playback using Howler.js, including play/pause with fade-out to prevent popping,
  * seeking with crossfade, volume control, looping, and fade effects.
  */
-export class audioPlayerManager {
+class AudioPlayerModel implements AudioPlayerController, AudioPlayerState {
   private player: Howl | null = null;
-  private isLooping = false;
-  private fadeEffect = false;
-  private volume = 1;
   private updateFrameId: number | null = null;
   private isSeeking = false;
 
+  public isPlaying = false;
+  public currentTime = 0;
+  public duration = 0;
+  public volume = 1;
+  public isLooping = false;
+  public isFadeEffectActive = false;
+
   constructor(
     private trackKey: string,
-    private onPlayStateChange: (isPlaying: boolean) => void,
-    private onTimeUpdate: (currentTime: number) => void,
-    private onDurationSet: (duration: number) => void
+    private onStateUpdate: (state: Partial<AudioPlayerState>) => void,
+    private trackService: TrackService
   ) {}
+
+  // Add this method to update the state and notify the controller
+  private updateState(state: Partial<AudioPlayerState>): void {
+    Object.assign(this, state);
+    this.onStateUpdate(state);
+  }
 
   /**
    * Initializes the audio player by loading the track from IndexedDB.
    */
   async initialize(): Promise<void> {
-    const track = await getTrackFromIndexedDB(this.trackKey);
+    const track = await this.trackService.getTrack(this.trackKey);
     if (track) {
       const audioBlob = new Blob([track.data], { type: track.type });
       if (audioBlob) {
@@ -36,10 +46,10 @@ export class audioPlayerManager {
           onload: this.handleTrackLoad.bind(this),
         });
       } else {
-        console.error('Failed to load audio blob from IndexedDB.');
+        console.error('Failed to load audio blob from repository.');
       }
     } else {
-      console.error('Failed to load audio blob from IndexedDB.');
+      console.error('Failed to load audio blob from repository.');
     }
   }
 
@@ -48,27 +58,31 @@ export class audioPlayerManager {
       // Restart the track if looping is enabled
       this.player.seek(0);
       this.player.play();
-      this.onPlayStateChange(true);
+      this.isPlaying = true;
+      this.updateState({ isPlaying: this.isPlaying });
       this.updatePlaybackState();
     } else {
-      this.onPlayStateChange(false);
+      this.isPlaying = false;
+      this.updateState({ isPlaying: this.isPlaying });
       this.cancelUpdatePlaybackState();
     }
   }
 
   private handleTrackLoad(): void {
     if (this.player) {
-      this.onDurationSet(this.player.duration());
+      this.duration = this.player.duration();
+      this.updateState({ duration: this.duration });
     }
   }
 
   /**
    * Updates the playback state by requesting animation frames.
    */
-  updatePlaybackState(): void {
+  private updatePlaybackState(): void {
     this.cancelUpdatePlaybackState();
     if (this.player && this.player.playing() && !this.isSeeking) {
-      this.onTimeUpdate(this.player.seek() as number);
+      this.currentTime = this.player.seek() as number;
+      this.updateState({ currentTime: this.currentTime });
       this.updateFrameId = requestAnimationFrame(this.updatePlaybackState.bind(this));
     }
   }
@@ -87,21 +101,21 @@ export class audioPlayerManager {
     if (this.player) {
       if (this.player.playing()) {
         // Apply a brief fade-out on pause
-        const fadeOutDuration = this.fadeEffect ? 1000 : 200; // Longer fade if fadeEffect is enabled
+        const fadeOutDuration = this.isFadeEffectActive ? 1000 : 200; // Longer fade if fadeEffect is enabled
         this.player.fade(this.volume, 0, fadeOutDuration);
         setTimeout(() => {
           this.player?.pause();
           this.player?.volume(this.volume); // Reset volume back to original
-          this.onPlayStateChange(false);
+          this.updateState({ isPlaying: false });
         }, fadeOutDuration);
         this.cancelUpdatePlaybackState();
       } else {
         // Apply fade-in on play
-        const fadeInDuration = this.fadeEffect ? 1000 : 200; // Longer fade if fadeEffect is enabled
+        const fadeInDuration = this.isFadeEffectActive ? 1000 : 200; // Longer fade if fadeEffect is enabled
         this.player.volume(0);
         this.player.play();
         this.player.fade(0, this.volume, fadeInDuration);
-        this.onPlayStateChange(true);
+        this.updateState({ isPlaying: true });
         this.updatePlaybackState();
       }
     } else {
@@ -118,20 +132,20 @@ export class audioPlayerManager {
     if (this.player) {
       this.isSeeking = true;
       this.cancelUpdatePlaybackState();
-
+  
       const fadeDuration = 150; // Fade duration in milliseconds
       const currentVolume = this.volume;
-
+  
       // Fade out the current playback
       this.player.fade(currentVolume, 0, fadeDuration);
-
+  
       setTimeout(() => {
         // Perform the seek
         this.player?.seek(time);
-
+  
         // Fade in the playback
         this.player?.fade(0, currentVolume, fadeDuration);
-
+  
         // Wait for fade-in to complete before resuming playback state updates
         setTimeout(() => {
           this.isSeeking = false;
@@ -139,9 +153,10 @@ export class audioPlayerManager {
             this.updatePlaybackState();
           }
         }, fadeDuration);
-
+  
         // Update the current time immediately after seeking
-        this.onTimeUpdate(time);
+        this.currentTime = time;
+        this.updateState({ currentTime: this.currentTime });
       }, fadeDuration * 1.1); // Slightly longer to ensure fade-out is complete
     } else {
       console.warn('Player is not initialized.');
@@ -157,6 +172,7 @@ export class audioPlayerManager {
     if (this.player) {
       this.player.volume(newVolume);
       this.volume = newVolume;
+      this.updateState({ volume: this.volume });
     }
   }
 
@@ -168,13 +184,15 @@ export class audioPlayerManager {
     if (this.player) {
       this.player.loop(this.isLooping);
     }
+    this.updateState({ isLooping: this.isLooping });
   }
 
   /**
    * Toggles the fade effect for play/pause actions.
    */
   toggleFadeEffect(): void {
-    this.fadeEffect = !this.fadeEffect;
+    this.isFadeEffectActive = !this.isFadeEffectActive;
+    this.updateState({ isFadeEffectActive: this.isFadeEffectActive });
   }
 
   /**
@@ -183,7 +201,7 @@ export class audioPlayerManager {
   close(): void {
     this.cancelUpdatePlaybackState();
     if (this.player) {
-      if (this.fadeEffect) {
+      if (this.isFadeEffectActive) {
         this.player.fade(this.volume, 0, 100);
         setTimeout(() => {
           this.player?.stop();
@@ -200,31 +218,6 @@ export class audioPlayerManager {
       }
     }
   }
-
-  /**
-   * Checks if looping is active.
-   *
-   * @returns {boolean} True if looping is active, false otherwise.
-   */
-  isLoopActive(): boolean {
-    return this.isLooping;
-  }
-
-  /**
-   * Checks if the fade effect is active.
-   *
-   * @returns {boolean} True if the fade effect is active, false otherwise.
-   */
-  isFadeEffectActive(): boolean {
-    return this.fadeEffect;
-  }
-
-  /**
-   * Gets the current volume level.
-   *
-   * @returns {number} The current volume level between 0 and 1.
-   */
-  getVolume(): number {
-    return this.volume;
-  }
 }
+
+export default AudioPlayerModel;

@@ -7,25 +7,19 @@ interface AudioSliderProps {
 }
 
 const AudioSlider: React.FC<AudioSliderProps> = ({ currentTime, duration, onSeek }) => {
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTime = Number(e.target.value);
+    onSeek(newTime);
   };
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-      <span>{formatTime(currentTime)}</span>
-      <input
-        type="range"
-        min={0}
-        max={duration}
-        value={currentTime}
-        onChange={(e) => onSeek(Number(e.target.value))}
-        style={{ flex: 1 }}
-      />
-      <span>{formatTime(duration)}</span>
-    </div>
+    <input
+      type="range"
+      min="0"
+      max={duration}
+      value={currentTime}
+      onChange={handleChange}
+    />
   );
 };
 

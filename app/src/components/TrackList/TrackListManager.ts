@@ -1,114 +1,197 @@
-// app/src/models/TrackListManager.ts
-import Track from '../../models/track';
-import Playlist from '../../models/playlist';
+// app/src/components/TrackList/TrackListManager.ts
+import TrackService from '../../data/services/TrackService';
+import PlaylistService from '../../data/services/PlaylistService';
+import Track from '../../data/models/Track';
+import Playlist from '../../data/models/Playlist';
 import { removeFileExtension } from '../../utils/files/removeFileExtension';
-import { getAllTrackKeys } from '../../data/storageAudio';
-import { getAllPlaylists } from '../../data/playlistStorage';
 
-export interface ListItem {
+export interface TreeNode {
   id: string;
   type: 'track' | 'playlist';
   data: Track | Playlist;
+  children: TreeNode[];
 }
 
-class TrackListManager {
+/**
+ * Manages the track and playlist tree structure.
+ */
+export default class TrackListManager {
+  private trackService: TrackService;
+  private playlistService: PlaylistService;
   private tracks: Track[] = [];
   private playlists: Playlist[] = [];
-  private expandedPlaylists: Set<string> = new Set();
   private searchName: string = '';
   private searchTags: string = '';
 
-  async loadTracks() {
-    const keys = await getAllTrackKeys();
-    this.setTracks(keys);
+  constructor() {
+    this.trackService = new TrackService();
+    this.playlistService = new PlaylistService();
   }
 
-  async loadPlaylists() {
-    const playlistData = await getAllPlaylists();
-    this.setPlaylists(playlistData);
+  async loadData(): Promise<void> {
+    this.tracks = await this.trackService.getAllTracks();
+    this.playlists = await this.playlistService.getAllPlaylists();
   }
 
-  setTracks(tracks: Track[]) {
-    this.tracks = tracks;
-  }
-
-  setPlaylists(playlists: Playlist[]) {
-    this.playlists = playlists;
-  }
-
-  setExpandedPlaylists(expandedPlaylists: Set<string>) {
-    this.expandedPlaylists = expandedPlaylists;
-  }
-
-  getExpandedPlaylists(): Set<string> {
-    return this.expandedPlaylists;
-  }
-
-  setSearchName(searchName: string) {
+  /**
+   * Sets the search criteria for track names.
+   * @param searchName The name to search for.
+   */
+  setSearchName(searchName: string): void {
     this.searchName = searchName;
   }
 
-  getSearchName(): string {
-    return this.searchName;
-  }
-
-  setSearchTags(searchTags: string) {
+  /**
+   * Sets the search criteria for track tags.
+   * @param searchTags The tags to search for.
+   */
+  setSearchTags(searchTags: string): void {
     this.searchTags = searchTags;
   }
 
-  getSearchTags(): string {
-    return this.searchTags;
-  }
+  /**
+   * Builds a tree structure of playlists and tracks.
+   * @returns An array of root TreeNodes.
+   */
+  buildTree(): TreeNode[] {
+    const playlistMap = new Map<string, TreeNode>();
+    const trackMap = new Map<string, TreeNode>();
+    const rootNodes: TreeNode[] = [];
 
-  togglePlaylist(playlistId: string) {
-    if (this.expandedPlaylists.has(playlistId)) {
-      this.expandedPlaylists.delete(playlistId);
-    } else {
-      this.expandedPlaylists.add(playlistId);
+    for (const playlist of this.playlists) {
+      const node: TreeNode = {
+        id: playlist.id,
+        type: 'playlist',
+        data: playlist,
+        children: [],
+      };
+      playlistMap.set(playlist.id, node);
     }
+
+    for (const node of Array.from(playlistMap.values())) {
+      const playlist = node.data as Playlist;
+      if (playlist.parentId && playlistMap.has(playlist.parentId)) {
+        playlistMap.get(playlist.parentId)!.children.push(node);
+      } else {
+        rootNodes.push(node);
+      }
+    }
+
+    // Create TreeNodes for tracks
+    for (const track of this.tracks) {
+      const node: TreeNode = {
+        id: track.id,
+        type: 'track',
+        data: track,
+        children: [],
+      };
+      trackMap.set(track.id, node);
+
+      if (track.playlistId && playlistMap.has(track.playlistId)) {
+        playlistMap.get(track.playlistId)!.children.push(node);
+      } else {
+        rootNodes.push(node);
+      }
+    }
+
+    return rootNodes;
   }
 
-  getFilteredTracks(): Track[] {
-    return this.tracks.filter((track) => {
+  /**
+   * Filters the tree based on search criteria.
+   * @returns An array of filtered root TreeNodes.
+   */
+  getFilteredTree(): TreeNode[] {
+    const filterByNameAndTags = (track: Track): boolean => {
       const nameMatch = removeFileExtension(track.name)
         .toLowerCase()
         .includes(this.searchName.toLowerCase());
       const tagsMatch =
         this.searchTags === '' ||
-        track.tags.some((tag) => tag.toLowerCase().includes(this.searchTags.toLowerCase()));
+        track.tags.some((tag) =>
+          tag.toLowerCase().includes(this.searchTags.toLowerCase())
+        );
       return nameMatch && tagsMatch;
-    });
+    };
+
+    const filterTree = (nodes: TreeNode[]): TreeNode[] => {
+      return nodes
+        .map((node) => {
+          if (node.type === 'track') {
+            const track = node.data as Track;
+            return filterByNameAndTags(track) ? node : null;
+          } else {
+            const filteredChildren = filterTree(node.children);
+            return filteredChildren.length > 0
+              ? { ...node, children: filteredChildren }
+              : null;
+          }
+        })
+        .filter((node): node is TreeNode => node !== null);
+    };
+
+    const tree = this.buildTree();
+    return filterTree(tree);
   }
 
-  getFlatTrackList(): ListItem[] {
-    const list: ListItem[] = [];
-    const filteredTracks = this.getFilteredTracks();
+  /**
+   * Moves a track to a new playlist.
+   * @param trackId The ID of the track to move.
+   * @param targetPlaylistId The ID of the target playlist.
+   */
+  async moveTrack(trackId: string, targetPlaylistId?: string): Promise<void> {
+    const track = this.tracks.find((t) => t.id === trackId);
+    if (track) {
+      track.playlistId = targetPlaylistId;
+      await this.trackService.updateTrack(track);
+    }
+  }
 
-    // Tracks without playlist
-    const tracksWithoutPlaylist = filteredTracks.filter(
-      (track) => !track.playlistId
-    );
-    tracksWithoutPlaylist.forEach((track) => {
-      list.push({ id: track.id, type: 'track', data: track });
-    });
+  /**
+   * Moves a playlist to a new parent playlist.
+   * @param playlistId The ID of the playlist to move.
+   * @param targetParentId The ID of the target parent playlist.
+   */
+  async movePlaylist(playlistId: string, targetParentId?: string): Promise<void> {
+    const playlist = this.playlists.find((p) => p.id === playlistId);
+    if (playlist) {
+      playlist.parentId = targetParentId;
+      await this.playlistService.updatePlaylist(playlist);
+    }
+  }
 
-    // Playlists
-    this.playlists.forEach((playlist) => {
-      const playlistTracks = filteredTracks.filter(
-        (track) => track.playlistId === playlist.id
-      );
-      if (playlistTracks.length > 0) {
-        list.push({ id: playlist.id, type: 'playlist', data: playlist });
-        if (this.expandedPlaylists.has(playlist.id)) {
-          playlistTracks.forEach((track) => {
-            list.push({ id: track.id, type: 'track', data: track });
-          });
-        }
+  /**
+   * Deletes a track.
+   * @param trackId The ID of the track to delete.
+   */
+  async deleteTrack(trackId: string): Promise<void> {
+    this.tracks = this.tracks.filter((t) => t.id !== trackId);
+    await this.trackService.deleteTrack(trackId);
+  }
+
+  /**
+   * Deletes a playlist and its descendants.
+   * @param playlistId The ID of the playlist to delete.
+   */
+  async deletePlaylist(playlistId: string): Promise<void> {
+    const deleteRecursive = async (id: string) => {
+      // Delete child playlists
+      const childPlaylists = this.playlists.filter((p) => p.parentId === id);
+      for (const child of childPlaylists) {
+        await deleteRecursive(child.id);
       }
-    });
 
-    return list;
+      // Delete tracks in this playlist
+      const tracksToDelete = this.tracks.filter((t) => t.playlistId === id);
+      for (const track of tracksToDelete) {
+        await this.deleteTrack(track.id);
+      }
+
+      // Remove playlist
+      this.playlists = this.playlists.filter((p) => p.id !== id);
+      await this.playlistService.deletePlaylist(id);
+    };
+
+    await deleteRecursive(playlistId);
   }
 }
-
-export default TrackListManager;
