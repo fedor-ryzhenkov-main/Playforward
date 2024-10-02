@@ -1,14 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import LibraryItem from '../../data/models/LibraryItem';
 import Track from '../../data/models/Track';
-import Playlist from '../../data/models/Playlist';
 import TrackItem from '../TrackItem/TrackItem';
 import PlaylistItem from '../PlaylistItem/PlaylistItem';
 import './Styles.css';
 import { ResolvedPlaylist } from '../../data/services/BaseService';
-/**
- * Props for the TrackListView component.
- */
+
 interface TrackListViewProps {
   trackTree: LibraryItem[];
   loading: boolean;
@@ -38,7 +35,7 @@ const TrackListView: React.FC<TrackListViewProps> = ({
   /**
    * Handles the creation of a new playlist via prompt.
    */
-  const handleCreatePlaylistClick = () => {
+  const handleCreatePlaylist = () => {
     const playlistName = prompt('Enter playlist name:');
     if (playlistName && playlistName.trim() !== '') {
       onCreatePlaylist(playlistName.trim());
@@ -48,7 +45,7 @@ const TrackListView: React.FC<TrackListViewProps> = ({
   /**
    * Handles the upload of a new track via file input.
    */
-  const handleUploadTrackClick = () => {
+  const handleUploadTrack = () => {
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = 'audio/*';
@@ -81,6 +78,41 @@ const TrackListView: React.FC<TrackListViewProps> = ({
     });
   };
 
+  useEffect(() => {
+    const handleContextMenu = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (
+        customEvent.detail &&
+        typeof customEvent.detail.registerMenuItems === 'function'
+      ) {
+        customEvent.detail.registerMenuItems([
+          {
+            label: 'Create Playlist',
+            onClick: () => {
+              handleCreatePlaylist();
+            },
+          },
+          {
+            label: 'Upload Track',
+            onClick: () => {
+              handleUploadTrack();
+            },
+          },
+        ]);
+      }
+    };
+
+    const element = document.getElementById('track-list-container');
+    element?.addEventListener('contextmenu-aggregate', handleContextMenu);
+
+    return () => {
+      element?.removeEventListener(
+        'contextmenu-aggregate',
+        handleContextMenu
+      );
+    };
+  }, [onCreatePlaylist, onUploadTrack]);
+
   return (
     <div className="track-list-container" id="track-list-container">
       <div className="search-container">
@@ -98,10 +130,8 @@ const TrackListView: React.FC<TrackListViewProps> = ({
         />
       </div>
       <div className="actions-container">
-        <button onClick={handleCreatePlaylistClick}>Create Playlist</button>
-        <button onClick={handleUploadTrackClick}>Upload Track</button>
+        {/* Removed Create Playlist and Upload Track buttons */}
       </div>
-      {loading && <div className="loading">Loading...</div>}
       {error && <div className="error">{error}</div>}
       <div className="track-list">{renderItems(trackTree)}</div>
       <div className="context-menu-hint">Right-click to open context menu</div>

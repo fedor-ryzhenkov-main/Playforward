@@ -3,9 +3,9 @@ import { FaChevronRight, FaChevronDown } from 'react-icons/fa';
 import { useContextMenuRegistration } from '../../contexts/ContextMenuContext';
 import MoveItemModal from '../MoveItemModal/MoveItemModal';
 import TrackItem from '../TrackItem/TrackItem';
-import LibraryItem from '../../data/models/LibraryItem';
 import Track from '../../data/models/Track';
 import { ResolvedPlaylist } from '../../data/services/BaseService';
+import './PlaylistItem.css';
 
 interface PlaylistItemProps {
   playlist: ResolvedPlaylist; // Use ResolvedPlaylist
@@ -70,8 +70,8 @@ const PlaylistItem: React.FC<PlaylistItemProps> = React.memo(({ playlist }) => {
   };
 
   return (
-    <div className="playlist-item" id={`playlist-item-${playlist.id}`}>
-      <div className="playlist-header" onClick={toggleOpen}>
+    <div className="playlist-item">
+      <div className="playlist-header" id={`playlist-item-${playlist.id}`} onClick={toggleOpen}>
         {isOpen ? <FaChevronDown /> : <FaChevronRight />}
         <span>{playlist.name}</span>
       </div>

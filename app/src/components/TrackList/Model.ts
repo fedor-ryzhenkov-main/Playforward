@@ -18,6 +18,14 @@ export default class TrackListModel {
   }
 
   /**
+   * Determines if a search query is active.
+   * @returns True if either searchName or searchTags is non-empty, false otherwise.
+   */
+  private isSearchActive(): boolean {
+    return this.searchName.trim() !== '' || this.searchTags.trim() !== '';
+  }
+
+  /**
    * Subscribes to data change events.
    * @param callback The callback to invoke on data changes.
    */
@@ -34,26 +42,65 @@ export default class TrackListModel {
   }
 
   /**
-   * Builds a hierarchical tree structure from the given items, applying search filters.
+   * Builds and filters the hierarchical tree structure from the items.
    * @param searchName The name to filter by.
    * @param searchTags The tags to filter by.
-   * @returns The hierarchical tree of LibraryItems.
+   * @returns The filtered hierarchical tree of LibraryItems.
    */
   async getFilteredTree(searchName: string, searchTags: string): Promise<LibraryItem[]> {
     this.searchName = searchName;
     this.searchTags = searchTags;
+
     const allItems = await this.baseService.getAllItems();
-    const filteredItems = this.filterItems(allItems);
-    return this.baseService.buildTree(filteredItems);
+
+    // Build the full tree without filtering
+    const fullTree = await this.baseService.buildTree(allItems);
+
+    // Recursively filter the tree
+    const filteredTree = this.filterTree(fullTree);
+
+    return filteredTree;
   }
 
   /**
-   * Filters the items based on search criteria.
+   * Recursively filters the tree based on search criteria.
    * @param items The array of LibraryItems to filter.
    * @returns The filtered array of LibraryItems.
    */
-  private filterItems(items: LibraryItem[]): LibraryItem[] {
-    return items.filter(item => this.filterItem(item));
+  private filterTree(items: LibraryItem[]): LibraryItem[] {
+    const filteredItems: LibraryItem[] = [];
+
+    for (const item of items) {
+      if (item.type === 'track') {
+        if (this.filterItem(item as Track)) {
+          filteredItems.push(item);
+        }
+      } else if (item.type === 'playlist') {
+        const playlist = item as ResolvedPlaylist;
+        const filteredChildren = this.filterTree(playlist.items);
+
+        if (this.isSearchActive()) {
+          // **Search is Active**
+          // Include playlist only if it has matching children
+          if (filteredChildren.length > 0) {
+            filteredItems.push({
+              ...playlist,
+              items: filteredChildren,
+            } as ResolvedPlaylist);
+          }
+          // Else, do not include the playlist
+        } else {
+          // **No Search Active**
+          // Include all playlists
+          filteredItems.push({
+            ...playlist,
+            items: filteredChildren,
+          } as ResolvedPlaylist);
+        }
+      }
+    }
+
+    return filteredItems;
   }
 
   /**
@@ -68,11 +115,12 @@ export default class TrackListModel {
       matches = item.name.toLowerCase().includes(this.searchName.toLowerCase());
     }
 
-    if (matches && this.searchTags) {
-      if (item.type === 'track') {
-        const track = item as Track;
-        matches = track.tags.some(tag => tag.toLowerCase().includes(this.searchTags.toLowerCase()));
-      }
+    if (matches && this.searchTags && item.type === 'track') {
+      const track = item as Track;
+      const searchTagsArray = this.searchTags.split(',').map(tag => tag.trim().toLowerCase());
+      matches = searchTagsArray.every(searchTag =>
+        track.tags.some(tag => tag.toLowerCase().includes(searchTag))
+      );
     }
 
     return matches;

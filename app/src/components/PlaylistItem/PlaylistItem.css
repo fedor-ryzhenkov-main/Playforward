@@ -10,9 +10,10 @@
   justify-content: flex-start;
   gap: 0.5rem;
   align-items: center;
-  padding: 0.625rem;
+  padding: 0.2rem;
   cursor: pointer;
   color: #fff;
+  
 }
 
 .playlist-content {
