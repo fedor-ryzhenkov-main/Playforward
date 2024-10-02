@@ -27,7 +27,7 @@ export default class TrackService {
       data: arrayBuffer,
       tags: [],
       description: '',
-      playlistId: undefined,
+      parentId: undefined,
     };
     await this.repository.add(track);
     return track;

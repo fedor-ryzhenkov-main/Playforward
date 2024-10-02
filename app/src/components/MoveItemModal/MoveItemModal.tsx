@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import './MoveTrackModal.css';
+import './MoveItemModal.css';
 import Track from '../../data/models/Track';
 import Playlist from '../../data/models/Playlist';
 import PlaylistService from '../../data/services/PlaylistService';
 import TrackService from '../../data/services/TrackService';
 
-interface MoveTrackModalProps {
-  track: Track;
+interface MoveItemModalProps {
+  item: Track | Playlist;
   onClose: () => void;
   onMove: () => void;
 }
 
-const MoveTrackModal: React.FC<MoveTrackModalProps> = ({ track, onClose, onMove }) => {
+const MoveItemModal: React.FC<MoveItemModalProps> = ({ item, onClose, onMove }) => {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [filteredPlaylists, setFilteredPlaylists] = useState<Playlist[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -41,14 +41,30 @@ const MoveTrackModal: React.FC<MoveTrackModalProps> = ({ track, onClose, onMove 
 
   const handleMove = async (playlistId?: string) => {
     try {
-      track.parentId = playlistId;
-      await trackService.updateTrack(track);
+      item.parentId = playlistId;
+
+      if (isTrack(item)) {
+        await trackService.updateTrack(item);
+      } else if (isPlaylist(item)) {
+        await playlistService.updatePlaylist(item);
+      }
+
       onMove(); // Notify parent component to refresh if needed
     } catch (error) {
-      console.error('Error moving track:', error);
-      alert('Failed to move track.');
+      console.error('Error moving item:', error);
+      alert('Failed to move item.');
     }
   };
+
+  // Type guard to check if item is a Track
+  function isTrack(item: any): item is Track {
+    return (item as Track).data !== undefined; // Replace with an actual property unique to Track
+  }
+
+  // Type guard to check if item is a Playlist
+  function isPlaylist(item: any): item is Playlist {
+    return (item as Playlist).items !== undefined;
+  }
 
   const renderPlaylistTree = (playlists: Playlist[], parentId?: string, path: string = '') => {
     return playlists
@@ -98,4 +114,4 @@ const MoveTrackModal: React.FC<MoveTrackModalProps> = ({ track, onClose, onMove 
   );
 };
 
-export default MoveTrackModal;
+export default MoveItemModal;

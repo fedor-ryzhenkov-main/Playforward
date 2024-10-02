@@ -18,14 +18,14 @@ export default class PlaylistService {
    * Creates a new playlist.
    * @param name The name of the playlist.
    * @param parentId The optional parent playlist ID.
-   * @param tracks The optional tracks to add to the playlist.
+   * @param items The optional tracks to add to the playlist.
    */
-  async createPlaylist(name: string, parentId?: string, tracks?: Track[]): Promise<void> {
+  async createPlaylist(name: string, parentId?: string, items?: (Track | Playlist)[]): Promise<void> {
     const playlist: Playlist = {
       id: uuidv4(),
       name,
       parentId,
-      tracks: tracks || [],
+      items: items || [],
     };
     await this.repository.add(playlist);
   }
@@ -46,7 +46,7 @@ export default class PlaylistService {
     await this.repository.delete(id);
   }
 
-  async getPlaylistTracks(id: string): Promise<Track[]> {
-    return this.repository.getPlaylistTracks(id);
+  async getPlaylistItems(id: string): Promise<(Track | Playlist)[]> {
+    return this.repository.getPlaylistItems(id);
   }
 }

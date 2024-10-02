@@ -86,8 +86,8 @@ export default class TrackListManager {
       };
       trackMap.set(track.id, node);
 
-      if (track.playlistId && playlistMap.has(track.playlistId)) {
-        playlistMap.get(track.playlistId)!.children.push(node);
+      if (track.parentId && playlistMap.has(track.parentId)) {
+        playlistMap.get(track.parentId)!.children.push(node);
       } else {
         rootNodes.push(node);
       }
@@ -142,7 +142,7 @@ export default class TrackListManager {
   async moveTrack(trackId: string, targetPlaylistId?: string): Promise<void> {
     const track = this.tracks.find((t) => t.id === trackId);
     if (track) {
-      track.playlistId = targetPlaylistId;
+      track.parentId = targetPlaylistId;
       await this.trackService.updateTrack(track);
     }
   }
@@ -182,7 +182,7 @@ export default class TrackListManager {
       }
 
       // Delete tracks in this playlist
-      const tracksToDelete = this.tracks.filter((t) => t.playlistId === id);
+      const tracksToDelete = this.tracks.filter((t) => t.parentId === id);
       for (const track of tracksToDelete) {
         await this.deleteTrack(track.id);
       }

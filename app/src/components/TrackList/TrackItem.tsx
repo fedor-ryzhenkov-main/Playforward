@@ -5,7 +5,7 @@ import { ContextMenuItem } from '../ContextMenu/ContextMenu';
 import TrackService from '../../data/services/TrackService';
 import './TrackItem.css';
 import { useContextMenuRegistration } from '../../contexts/ContextMenuContext';
-import MoveTrackModal from '../MoveTrackModal/MoveTrackModal';
+import MoveItemModal from '../MoveItemModal/MoveItemModal';
 
 interface TrackItemProps {
   track: Track;
@@ -13,12 +13,6 @@ interface TrackItemProps {
 
 const TrackItem: React.FC<TrackItemProps> = ({ track }) => {
   const { playTrack, stopTrack, isPlaying } = useAudioPlayer();
-  const [contextMenu, setContextMenu] = useState<{
-    visible: boolean;
-    x: number;
-    y: number;
-    items: ContextMenuItem[];
-  }>({ visible: false, x: 0, y: 0, items: [] });
   const trackService = new TrackService();
   const { registerMenuItems } = useContextMenuRegistration();
   const [isMoveModalOpen, setMoveModalOpen] = useState(false);
@@ -40,28 +34,24 @@ const TrackItem: React.FC<TrackItemProps> = ({ track }) => {
             label: 'Delete Track',
             onClick: () => {
               handleDeleteTrack();
-              setContextMenu({ ...contextMenu, visible: false });
             },
           },
           {
             label: 'Rename Track',
             onClick: () => {
               handleRenameTrack();
-              setContextMenu({ ...contextMenu, visible: false });
             },
           },
           {
             label: 'Edit Tags',
             onClick: () => {
               handleEditTags();
-              setContextMenu({ ...contextMenu, visible: false });
             },
           },
           {
             label: 'Edit Description',
             onClick: () => {
               handleEditDescription();
-              setContextMenu({ ...contextMenu, visible: false });
             },
           },
           {
@@ -166,8 +156,8 @@ const TrackItem: React.FC<TrackItemProps> = ({ track }) => {
         </div>
       </div>
       {isMoveModalOpen && (
-        <MoveTrackModal
-          track={track}
+        <MoveItemModal
+          item={track}
           onClose={() => setMoveModalOpen(false)}
           onMove={() => {
             // Refresh logic if necessary

@@ -5,5 +5,5 @@ export default interface Track {
   type: string;
   tags: string[];
   description?: string;
-  playlistId?: string; 
+  parentId?: string; 
 }
