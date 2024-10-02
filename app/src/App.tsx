@@ -2,6 +2,7 @@ import React from 'react';
 import { Container, Typography } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import AudioUploader from './components/AudioUploader/AudioUploader';
+import CreatePlaylist from './components/CreatePlaylist/CreatePlaylist';
 import TrackList from './components/TrackList/TrackList';
 import './App.css';
 
@@ -13,11 +14,13 @@ const App: React.FC = () => {
       </Typography>
       <Grid container flexDirection="column" spacing={3} justifyContent="center" alignItems="center">
         <Grid container justifyContent="center">
+          <CreatePlaylist />
           <AudioUploader />
         </Grid>
-        <Grid>
+        
+        <div style={{ width: '100%' }}>
           <TrackList />
-        </Grid>
+        </div>
       </Grid>
     </Container>
   );

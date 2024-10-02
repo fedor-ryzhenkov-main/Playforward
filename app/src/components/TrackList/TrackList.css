@@ -1,143 +1,143 @@
+/* Container */
 .track-list-container {
-  background-color: #2a2a2a;
-  border-radius: 0.5rem; /* Use rem for border radius */
-  padding: 0.625rem; /* Use rem for padding */
-  margin-top: 1.25rem; /* Use rem for margin */
+  background-color: #1e1e1e;
+  border-radius: 0.5rem;
+  padding: 0.625rem;
+  margin-top: 1.25rem;
+  max-width: 50rem;
+  height: 37.5rem;
+  box-sizing: border-box;
 }
 
+/* Search Inputs */
 .search-container {
   display: flex;
-  flex-direction: column; /* Stack items on mobile */
-  gap: 0.625rem; /* Use rem for gap */
-  margin-bottom: 0.625rem; /* Use rem for margin */
+  flex-direction: column;
+  gap: 0.625rem;
+  margin-bottom: 0.625rem;
 }
 
 .search-container input {
-  flex: 1;
-  padding: 0.3125rem; /* Use rem for padding */
-  border-radius: 0.25rem; /* Use rem for border radius */
-  border: 1px solid #3a3a3a;
-  background-color: #3a3a3a;
-  color: #ffffff;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  border: none;
+  background-color: #2a2a2a;
+  color: #fff;
 }
 
+@media (min-width: 600px) {
+  .search-container {
+    flex-direction: row;
+  }
+}
+
+/* Track List */
 .track-list {
   list-style-type: none;
   padding: 0;
   margin: 0;
-  max-height: 18.75rem; /* Use rem for height */
+  height: calc(100% - 5rem); /* Adjust height based on container */
   overflow-y: auto;
+  background-color: #2a2a2a;
+  border-radius: 0.5rem;
 }
 
-.track-list li {
-  padding: 0.625rem; /* Use rem for padding */
-  cursor: pointer;
-  border-bottom: 1px solid #3a3a3a;
+/* Tracks */
+.track-item {
   display: flex;
   align-items: center;
+  padding: 0.625rem;
+  cursor: pointer;
 }
 
-.track-list li:last-child {
-  border-bottom: none;
-}
-
-.track-list li:hover {
+.track-item:hover,
+.track-item.selected {
   background-color: #3a3a3a;
 }
 
-.track-list li.selected {
-  background-color: #4CAF50;
-  color: #ffffff;
+.track-item.playing {
+  background-color: #4caf50;
 }
 
 .track-name {
-  flex: 1;
-}
-
-.separator {
-  margin: 0 0.625rem; /* Use rem for margin */
-  color: #ffffff;
+  flex: 2;
+  color: #fff;
 }
 
 .track-tags,
 .track-description {
   flex: 1;
+  color: #ccc;
 }
 
+/* Playlists */
+.playlist-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.625rem;
+  cursor: pointer;
+  background-color: #1e1e1e;
+  color: #fff;
+}
+
+.playlist-header:hover,
+.playlist-header.selected {
+  background-color: #3a3a3a;
+}
+
+.playlist-tracks {
+  list-style-type: none;
+  padding-left: 1.25rem;
+}
+
+/* Context Menu */
 .context-menu {
   position: absolute;
-  background-color: #3a3a3a;
-  border: 1px solid #4CAF50;
-  border-radius: 0.25rem; /* Use rem for border radius */
-  padding: 0.3125rem; /* Use rem for padding */
+  background-color: #2a2a2a;
+  border: 1px solid #4caf50;
+  border-radius: 0.25rem;
+  padding: 0.3125rem;
   z-index: 1000;
 }
 
 .context-menu button {
   display: block;
   width: 100%;
-  padding: 0.3125rem; /* Use rem for padding */
+  padding: 0.5rem;
   background: none;
   border: none;
-  color: #ffffff;
-  cursor: pointer;
+  color: #fff;
   text-align: left;
+  cursor: pointer;
 }
 
 .context-menu button:hover {
-  background-color: #4CAF50;
+  background-color: #4caf50;
 }
 
-.edit-popup {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+/* Scrollbar Styling */
+.track-list::-webkit-scrollbar {
+  width: 0.5rem;
+}
+
+.track-list::-webkit-scrollbar-thumb {
+  background-color: #4caf50;
+  border-radius: 0.25rem;
+}
+
+.track-list::-webkit-scrollbar-track {
   background-color: #2a2a2a;
-  border: 1px solid #4CAF50;
-  border-radius: 0.5rem; /* Use rem for border radius */
-  padding: 1.25rem; /* Use rem for padding */
-  z-index: 1000;
-  width: 18.75rem; /* Use rem for width */
 }
 
-.edit-popup h2 {
-  margin-top: 0;
-}
-
-.edit-popup label {
-  display: block;
-  margin-bottom: 0.625rem; /* Use rem for margin */
-}
-
-.edit-popup input,
-.edit-popup textarea {
-  width: 100%;
-  padding: 0.3125rem; /* Use rem for padding */
-  border-radius: 0.25rem; /* Use rem for border radius */
-  border: 1px solid #3a3a3a;
-  background-color: #3a3a3a;
-  color: #ffffff;
-  margin-top: 0.3125rem; /* Use rem for margin */
-}
-
-.edit-popup button {
-  margin-top: 0.625rem; /* Use rem for margin */
-  padding: 0.3125rem 0.625rem; /* Use rem for padding */
-  border: none;
-  border-radius: 0.25rem; /* Use rem for border radius */
-  background-color: #4CAF50;
-  color: #ffffff;
-  cursor: pointer;
-}
-
-.edit-popup button:hover {
-  background-color: #45a049;
-}
-
-/* Media Queries for Larger Screens */
-@media (min-width: 600px) {
-  .search-container {
-    flex-direction: row; /* Align items in a row */
+/* Responsive Adjustments */
+@media (max-width: 600px) {
+  .track-list-container {
+    height: 25rem; /* Adjust height for smaller screens */
   }
+}
+
+.track-list-container:focus {
+  outline: none; /* Remove default outline if desired */
+  box-shadow: 0 0 0 2px #4caf50; /* Add a custom focus indicator */
 }

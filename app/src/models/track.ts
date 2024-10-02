@@ -5,5 +5,5 @@ export default interface Track {
     data: ArrayBuffer;
     tags: string[];
     description: string;
-    playlistId: string | null; // Add this line
+    playlistId: string | null;
 }

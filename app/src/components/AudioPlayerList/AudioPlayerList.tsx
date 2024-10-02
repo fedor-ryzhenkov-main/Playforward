@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getAllAudioKeys, deleteAudioFromIndexedDB } from '../../data/audioStorage';
+import { getAllTrackKeys, deleteTrackFromIndexedDB } from '../../data/storageAudio';
 import AudioPlayer from '../AudioPlayer/AudioPlayer';
 import Track from '../../models/track';
 
@@ -11,12 +11,12 @@ const AudioPlayerList: React.FC = () => {
   }, []);
 
   const loadTracks = async () => {
-    const keys = await getAllAudioKeys();
+    const keys = await getAllTrackKeys();
     setTracks(keys);
   };
 
   const deleteTrack = async (key: string) => {
-    await deleteAudioFromIndexedDB(key);
+    await deleteTrackFromIndexedDB(key);
     await loadTracks();
   };
 

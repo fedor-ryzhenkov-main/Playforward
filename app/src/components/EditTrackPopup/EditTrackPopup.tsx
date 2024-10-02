@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Track from '../../models/track';
-import { updateTrack } from '../../data/audioStorage';
+import { updateTrack } from '../../data/storageAudio';
 import { removeFileExtension } from '../../utils/files/removeFileExtension';
 import './EditTrackPopup.css';
 
