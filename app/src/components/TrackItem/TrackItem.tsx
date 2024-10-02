@@ -11,7 +11,7 @@ interface TrackItemProps {
   track: Track;
 }
 
-const TrackItem: React.FC<TrackItemProps> = ({ track }) => {
+const TrackItem: React.FC<TrackItemProps> = React.memo(({ track }) => {
   const { playTrack, stopTrack, isPlaying } = useAudioPlayer();
   const baseService = new BaseService(new BaseRepository<Track>('libraryObjectStore'));
   const { registerMenuItems } = useContextMenuRegistration();
@@ -88,7 +88,7 @@ const TrackItem: React.FC<TrackItemProps> = ({ track }) => {
     const newName = prompt('Enter new track name:', track.name);
     if (newName && newName.trim() !== '') {
       try {
-        await baseService.updateItem({...track, name: newName.trim()});
+        await baseService.updateItem({ ...track, name: newName.trim() });
         alert('Track renamed successfully!');
       } catch (error) {
         console.error('Error renaming track:', error);
@@ -102,7 +102,7 @@ const TrackItem: React.FC<TrackItemProps> = ({ track }) => {
     if (newTags !== null) {
       const tagsArray = newTags.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
       try {
-        //await baseService.updateItem({...track, tags: tagsArray});
+        await baseService.updateItem({ ...track, tags: tagsArray });
         alert('Tags updated successfully!');
       } catch (error) {
         console.error('Error updating tags:', error);
@@ -115,7 +115,7 @@ const TrackItem: React.FC<TrackItemProps> = ({ track }) => {
     const newDescription = prompt('Enter new description:', track.description || '');
     if (newDescription !== null) {
       try {
-        //await baseService.updateItem({...track, description: newDescription.trim()});
+        await baseService.updateItem({ ...track, description: newDescription.trim() });
         alert('Description updated successfully!');
       } catch (error) {
         console.error('Error updating description:', error);
@@ -139,7 +139,6 @@ const TrackItem: React.FC<TrackItemProps> = ({ track }) => {
           onClick={handleClick}
         >
           <div className="track-details">
-
             <div className="track-main-info">
             <span className="track-name">{track.name}</span>
             {track.description && (
@@ -172,6 +171,6 @@ const TrackItem: React.FC<TrackItemProps> = ({ track }) => {
       )}
     </>
   );
-};
+});
 
 export default TrackItem;

@@ -65,7 +65,6 @@ export class BaseRepository<T extends { id: string }> implements IRepository<T> 
       const request = store.get(id);
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
-        EventDispatcher.getInstance().emit('dataChanged', { action: 'getById', id });
         resolve(request.result || null);
       };
     });
@@ -79,7 +78,6 @@ export class BaseRepository<T extends { id: string }> implements IRepository<T> 
       const request = store.getAll();
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
-        EventDispatcher.getInstance().emit('dataChanged', { action: 'getAll' });
         resolve(request.result as T[]);
       };
     });

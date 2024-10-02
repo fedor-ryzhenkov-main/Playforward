@@ -5,7 +5,7 @@ import MoveItemModal from '../MoveItemModal/MoveItemModal';
 import TrackItem from '../TrackItem/TrackItem';
 import LibraryItem from '../../data/models/LibraryItem';
 import Track from '../../data/models/Track';
-import { ResolvedPlaylist } from '../TrackList/Model'; // Import ResolvedPlaylist
+import { ResolvedPlaylist } from '../../data/services/BaseService';
 
 interface PlaylistItemProps {
   playlist: ResolvedPlaylist; // Use ResolvedPlaylist
@@ -14,7 +14,7 @@ interface PlaylistItemProps {
 /**
  * Component representing a single playlist item, which can be toggled to show or hide its contents.
  */
-const PlaylistItem: React.FC<PlaylistItemProps> = ({ playlist }) => {
+const PlaylistItem: React.FC<PlaylistItemProps> = React.memo(({ playlist }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { registerMenuItems } = useContextMenuRegistration();
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
@@ -92,6 +92,6 @@ const PlaylistItem: React.FC<PlaylistItemProps> = ({ playlist }) => {
       )}
     </div>
   );
-};
+});
 
 export default PlaylistItem;

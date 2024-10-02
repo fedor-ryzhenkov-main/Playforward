@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import TrackListModel from './Model';
 import TrackListView from './View';
 import LibraryItem from '../../data/models/LibraryItem';
@@ -9,7 +9,8 @@ import Track from '../../data/models/Track';
  * Controller component that manages the TrackListModel and communicates with the TrackListView.
  */
 const TrackListController: React.FC = () => {
-  const [model] = useState(() => new TrackListModel());
+  const modelRef = useRef(new TrackListModel());
+  const model = modelRef.current;
   const [trackTree, setTrackTree] = useState<LibraryItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +51,7 @@ const TrackListController: React.FC = () => {
     return () => {
       model.unsubscribe(handleDataChanged);
     };
-  }, [loadTrackTree, model, handleDataChanged]);
+  }, [loadTrackTree, handleDataChanged]);
 
   /**
    * Handles changes in the search name input.

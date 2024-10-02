@@ -3,8 +3,9 @@ import './MoveItemModal.css';
 import Track from '../../data/models/Track';
 import Playlist from '../../data/models/Playlist';
 import LibraryItem from '../../data/models/LibraryItem';
-import BaseService from '../../data/services/BaseService';
+import BaseService, { ResolvedPlaylist } from '../../data/services/BaseService';
 import { BaseRepository } from '../../data/repositories/BaseRepository';
+import EventDispatcher from '../../data/events/EventDispatcher';
 
 interface MoveItemModalProps {
   item: LibraryItem;
@@ -20,35 +21,64 @@ const MoveItemModal: React.FC<MoveItemModalProps> = ({
   onClose,
   onMove,
 }) => {
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const [filteredPlaylists, setFilteredPlaylists] = useState<Playlist[]>([]);
+  const [playlists, setPlaylists] = useState<ResolvedPlaylist[]>([]);
+  const [filteredPlaylists, setFilteredPlaylists] = useState<ResolvedPlaylist[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const baseService = new BaseService(new BaseRepository<LibraryItem>('libraryObjectStore'));
 
   useEffect(() => {
     const loadPlaylists = async () => {
-      const allPlaylists = await baseService.getAllItems('playlist') as Playlist[];
+      const allItems = await baseService.getAllItems();
+      const playlistItems = allItems.filter(item => item.type === 'playlist') as Playlist[];
+      const resolvedTree = await baseService.buildTree(playlistItems);
+      const allPlaylists = flattenTree(resolvedTree);
       setPlaylists(allPlaylists);
       setFilteredPlaylists(allPlaylists);
     };
     loadPlaylists();
   }, [baseService]);
 
-  useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setFilteredPlaylists(playlists);
-    } else {
-      const lowerSearchTerm = searchTerm.toLowerCase();
-      const filtered = playlists.filter((playlist) =>
-        playlist.name.toLowerCase().includes(lowerSearchTerm)
-      );
-      setFilteredPlaylists(filtered);
+  // Helper function to flatten the tree structure
+  const flattenTree = (tree: (LibraryItem | ResolvedPlaylist)[]): ResolvedPlaylist[] => {
+    const flattened: ResolvedPlaylist[] = [];
+    const stack = [...tree];
+    while (stack.length > 0) {
+      const item = stack.pop();
+      if (item && item.type === 'playlist') {
+        flattened.push(item as ResolvedPlaylist);
+        if ((item as ResolvedPlaylist).items) {
+          stack.push(...(item as ResolvedPlaylist).items);
+        }
+      }
     }
-  }, [searchTerm, playlists]);
+    return flattened;
+  };
+
+  useEffect(() => {
+    let filtered = playlists;
+    if (searchTerm.trim() !== '') {
+      const lowerSearchTerm = searchTerm.toLowerCase();
+      filtered = playlists.filter((playlist) =>
+        playlist.fullPath.toLowerCase().includes(lowerSearchTerm)
+      );
+    }
+    // Filter out the current playlist to prevent moving under itself
+    if (item.type === 'playlist') {
+      filtered = filtered.filter((playlist) => playlist.id !== item.id);
+    }
+    setFilteredPlaylists(filtered);
+  }, [searchTerm, playlists, item]);
 
   const handleMove = async (playlistId?: string) => {
+    if (item.parentId === playlistId) {
+      // No change in parentId, do nothing
+      onMove();
+      return;
+    }
+
     try {
-      await baseService.updateItem({...item, parentId: playlistId});
+      await baseService.updateItem({ ...item, parentId: playlistId || undefined });
+      EventDispatcher.getInstance().emit('dataChanged'); // Emit only on actual move
       onMove();
     } catch (error) {
       console.error('Error moving item:', error);
@@ -56,14 +86,14 @@ const MoveItemModal: React.FC<MoveItemModalProps> = ({
     }
   };
 
-  const renderPlaylistTree = (): React.ReactNode => {
+  const renderPlaylistList = (): React.ReactNode => {
     return filteredPlaylists.map((playlist) => (
       <div key={playlist.id} className="playlist-item">
         <div
-          className="playlist-path"
+          className="playlist-name"
           onClick={() => handleMove(playlist.id)}
         >
-          {playlist.name}
+          {playlist.fullPath}
         </div>
       </div>
     ));
@@ -79,13 +109,13 @@ const MoveItemModal: React.FC<MoveItemModalProps> = ({
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <div className="playlist-tree">
+        <div className="playlist-list">
           <div className="playlist-item">
-            <div className="playlist-path" onClick={() => handleMove(undefined)}>
+            <div className="playlist-name" onClick={() => handleMove(undefined)}>
               No Playlist
             </div>
           </div>
-          {renderPlaylistTree()}
+          {renderPlaylistList()}
         </div>
         <button onClick={onClose}>Cancel</button>
       </div>

@@ -1,16 +1,9 @@
 import Track from '../../data/models/Track';
 import Playlist from '../../data/models/Playlist';
 import LibraryItem from '../../data/models/LibraryItem';
-import BaseService from '../../data/services/BaseService';
+import BaseService, { ResolvedPlaylist } from '../../data/services/BaseService';
 import { BaseRepository } from '../../data/repositories/BaseRepository';
 import EventDispatcher from '../../data/events/EventDispatcher';
-
-/**
- * Represents a resolved playlist with its child items.
- */
-export interface ResolvedPlaylist extends Omit<Playlist, 'items'> {
-  items: LibraryItem[];
-}
 
 /**
  * Manages the track and playlist tree structure.
@@ -51,50 +44,7 @@ export default class TrackListModel {
     this.searchTags = searchTags;
     const allItems = await this.baseService.getAllItems();
     const filteredItems = this.filterItems(allItems);
-    return this.buildTree(filteredItems);
-  }
-
-  /**
-   * Builds a hierarchical tree structure from the given items.
-   * @param items The flat array of LibraryItems.
-   * @returns The hierarchical tree of LibraryItems.
-   */
-  private buildTree(items: LibraryItem[]): LibraryItem[] {
-    const itemMap = new Map<string, LibraryItem>();
-
-    // Create a map of items by their ID
-    items.forEach(item => itemMap.set(item.id, item));
-
-    // Build the tree structure
-    const rootItems: LibraryItem[] = [];
-    items.forEach(item => {
-      if (!item.parentId) {
-        rootItems.push(this.resolveItem(item, itemMap));
-      }
-    });
-
-    return rootItems;
-  }
-
-  /**
-   * Recursively resolves a LibraryItem and its children.
-   * @param item The LibraryItem to resolve.
-   * @param itemMap A map of item IDs to LibraryItems.
-   * @returns The resolved LibraryItem with its children.
-   */
-  private resolveItem(item: LibraryItem, itemMap: Map<string, LibraryItem>): Track | ResolvedPlaylist {
-    if (item.type === 'playlist') {
-      const playlist = item as Playlist;
-      const resolvedItems = playlist.items
-        .map(itemId => itemMap.get(itemId))
-        .filter((child): child is LibraryItem => child !== undefined)
-        .map(childItem => this.resolveItem(childItem, itemMap));
-      return {
-        ...playlist,
-        items: resolvedItems,
-      };
-    }
-    return item as Track;
+    return this.baseService.buildTree(filteredItems);
   }
 
   /**

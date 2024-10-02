@@ -5,8 +5,7 @@ import Playlist from '../../data/models/Playlist';
 import TrackItem from '../TrackItem/TrackItem';
 import PlaylistItem from '../PlaylistItem/PlaylistItem';
 import './Styles.css';
-import { ResolvedPlaylist } from './Model';
-
+import { ResolvedPlaylist } from '../../data/services/BaseService';
 /**
  * Props for the TrackListView component.
  */
