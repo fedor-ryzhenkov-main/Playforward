@@ -29,34 +29,12 @@ const TrackItem: React.FC<TrackItemProps> = ({ track }) => {
   };
 
   const handleDeleteTrack = useCallback(async () => {
-    openModal(
-      <PromptModal
-        title="Confirm Delete"
-        message={`Are you sure you want to delete "${track.name}"?`}
-        onClose={closeModal}
-        onSubmit={async (confirmed) => {
-          if (confirmed) {
-            try {
-              await baseService.deleteItem(track.id);
-              closeModal();
-            } catch (error) {
-              console.error('Error deleting track:', error);
-              openModal(
-                <PromptModal
-                  title="Error"
-                  message="Failed to delete track."
-                  onClose={closeModal}
-                  onSubmit={closeModal}
-                />
-              );
-            }
-          } else {
-            closeModal();
-          }
-        }}
-      />
-    );
-  }, [baseService, track.id, track.name, openModal, closeModal]);
+    try {
+      await baseService.deleteItem(track.id);
+    } catch (error) {
+      console.error('Error deleting track:', error);
+    }
+  }, [baseService, track.id]);
 
   const handleRenameTrack = useCallback(() => {
     openModal(

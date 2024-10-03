@@ -5,5 +5,5 @@ import LibraryItem from './LibraryItem';
  */
 export default interface Playlist extends LibraryItem {
   type: 'playlist';
-  children?: LibraryItem[];
+  description?: string;
 }

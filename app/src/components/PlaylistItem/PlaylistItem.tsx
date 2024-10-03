@@ -13,12 +13,13 @@ import BaseService from '../../data/services/BaseService';
  */
 interface PlaylistItemProps {
   playlist: Playlist;
+  children: React.ReactNode;
 }
 
 /**
  * PlaylistItem component responsible for rendering a playlist and its children.
  */
-const PlaylistItem: React.FC<PlaylistItemProps> = React.memo(({ playlist }) => {
+const PlaylistItem: React.FC<PlaylistItemProps> = React.memo(({ playlist, children }) => {
   const { registerMenuItems, unregisterMenuItems } = useContextMenu();
   const contextMenuId = useRef(`playlist-${playlist.id}`);
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
@@ -71,17 +72,8 @@ const PlaylistItem: React.FC<PlaylistItemProps> = React.memo(({ playlist }) => {
   }, [registerMenuItems, unregisterMenuItems]);
 
   const renderChildren = () => {
-    if (!isExpanded || !playlist.children) return null;
-
-    return playlist.children.map((child) => {
-      if (child.type === 'playlist') {
-        return <PlaylistItem key={child.id} playlist={child as Playlist} />;
-      } else if (child.type === 'track') {
-        return <TrackItem key={child.id} track={child as Track} />;
-      } else {
-        return null;
-      }
-    });
+    if (!isExpanded || !children) return null;
+    return children;
   };
 
   return (

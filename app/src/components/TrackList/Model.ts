@@ -4,6 +4,8 @@ import Playlist from '../../data/models/Playlist';
 import LibraryItem from '../../data/models/LibraryItem';
 import BaseService from '../../data/services/BaseService';
 import EventDispatcher from '../../data/events/EventDispatcher';
+import ClosureEntry from '../../data/models/ClosureEntry';
+import TreeNode from '../../data/models/TreeNode';
 
 /**
  * Manages the track and playlist tree structure.
@@ -38,14 +40,14 @@ export default class TrackListModel {
    * Builds and filters the hierarchical tree structure from the items.
    * @param searchName The name to filter by.
    * @param searchTags The tags to filter by.
-   * @returns The filtered hierarchical tree of LibraryItems.
+   * @returns The filtered hierarchical tree of TreeNodes.
    */
-  async getFilteredTree(searchName: string, searchTags: string): Promise<LibraryItem[]> {
+  async getFilteredTree(searchName: string, searchTags: string): Promise<TreeNode[]> {
     this.searchName = searchName;
     this.searchTags = searchTags;
 
-    // Build the full tree
-    const fullTree = await this.baseService.buildTree();
+    // Build the full tree as TreeNodes
+    const fullTree = await this.buildTree();
     console.log('fullTree', fullTree);
 
     // Recursively filter the tree
@@ -56,44 +58,79 @@ export default class TrackListModel {
   }
 
   /**
-   * Recursively filters the tree based on search criteria.
-   * @param items The array of LibraryItems to filter.
-   * @returns The filtered array of LibraryItems.
+   * Builds the hierarchical tree using TreeNodes.
+   * @returns The root-level TreeNodes.
    */
-  private filterTree(items: LibraryItem[]): LibraryItem[] {
-    const filteredItems: LibraryItem[] = [];
+  private async buildTree(): Promise<TreeNode[]> {
+    const allItems = await this.baseService.getAllItems();
+    const closureEntries = await this.baseService.getAllClosureEntries();
 
-    for (const item of items) {
+    // Map item IDs to TreeNodes
+    const nodeMap = new Map<string, TreeNode>();
+    allItems.forEach(item => {
+      nodeMap.set(item.id, new TreeNode(item));
+    });
+
+    // Build parent-child relationships
+    closureEntries.forEach(entry => {
+      if (entry.depth === 1) {
+        const parentNode = nodeMap.get(entry.ancestorId);
+        const childNode = nodeMap.get(entry.descendantId);
+        if (parentNode && childNode && parentNode !== childNode) {
+          parentNode.children.push(childNode);
+        }
+      }
+    });
+
+    // Identify root nodes (nodes without parents)
+    const rootNodes = [];
+    for (const node of nodeMap.values()) {
+      const hasParent = closureEntries.some(
+        entry => entry.descendantId === node.item.id && entry.depth === 1
+      );
+      if (!hasParent) {
+        rootNodes.push(node);
+      }
+    }
+
+    return rootNodes;
+  }
+
+  /**
+   * Recursively filters the tree based on search criteria.
+   * @param nodes The array of TreeNodes to filter.
+   * @returns The filtered array of TreeNodes.
+   */
+  private filterTree(nodes: TreeNode[]): TreeNode[] {
+    const filteredNodes: TreeNode[] = [];
+
+    for (const node of nodes) {
+      const { item, children } = node;
+
       if (item.type === 'track') {
         if (this.filterItem(item as Track)) {
-          filteredItems.push(item);
+          filteredNodes.push(node);
         }
       } else if (item.type === 'playlist') {
-        const playlist = item as Playlist;
-        const filteredChildren = this.filterTree(playlist.children || []);
+        const filteredChildren = this.filterTree(children);
 
         if (this.isSearchActive()) {
-          // **Search is Active**
           // Include playlist only if it has matching children
           if (filteredChildren.length > 0) {
-            filteredItems.push({
-              ...playlist,
-              children: filteredChildren,
-            } as LibraryItem);
+            const newNode = new TreeNode(item);
+            newNode.children = filteredChildren;
+            filteredNodes.push(newNode);
           }
-          // Else, do not include the playlist
         } else {
-          // **No Search Active**
           // Include all playlists
-          filteredItems.push({
-            ...playlist,
-            children: filteredChildren,
-          } as LibraryItem);
+          const newNode = new TreeNode(item);
+          newNode.children = filteredChildren;
+          filteredNodes.push(newNode);
         }
       }
     }
 
-    return filteredItems;
+    return filteredNodes;
   }
 
   /**
@@ -109,20 +146,23 @@ export default class TrackListModel {
    */
   async exportData(): Promise<void> {
     const allItems = await this.baseService.getAllItems();
+    const closureEntries = await this.baseService.getAllClosureEntries();
 
-    // Convert ArrayBuffer data to base64 strings for serialization
-    const serializedItems = allItems.map((item) => {
-      if (item.type === 'track') {
-        const track = item as Track;
-        return {
-          ...track,
-          data: arrayBufferToBase64(track.data),
-        };
-      }
-      return item;
-    });
+    const exportData = {
+      libraryItems: allItems.map((item) => {
+        if (item.type === 'track') {
+          const track = item as Track;
+          return {
+            ...track,
+            data: arrayBufferToBase64(track.data),
+          };
+        }
+        return item;
+      }),
+      closureTable: closureEntries,
+    };
 
-    const blob = new Blob([JSON.stringify(serializedItems, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     saveAs(blob, 'library_export.json');
   }
 
@@ -131,19 +171,35 @@ export default class TrackListModel {
    */
   async importData(file: File): Promise<void> {
     const text = await file.text();
-    const importedItems = JSON.parse(text) as LibraryItem[];
+    const importedData = JSON.parse(text) as { libraryItems: LibraryItem[], closureTable: ClosureEntry[] };
 
     // Clear existing data
     await this.baseService.deleteAllItems();
+    await this.baseService.deleteAllClosureEntries();
 
-    // Reconstruct items and convert base64 strings back to ArrayBuffers
-    for (const item of importedItems) {
+    // Import library items
+    for (const item of importedData.libraryItems) {
       if (item.type === 'track') {
         const track = item as Track;
         track.data = base64ToArrayBuffer(track.data as unknown as string);
       }
       await this.baseService.addItem(item);
     }
+
+    console.log('closureTable', importedData.closureTable);
+
+    // Import closure table entries
+    for (const entry of importedData.closureTable) {
+      try {
+        await this.baseService.addClosureEntry(entry);
+      } catch (error) {
+        // If the entry already exists, just ignore the error and continue
+        console.log(`Closure entry already exists, skipping: ${entry.ancestorId} -> ${entry.descendantId}`);
+      }
+    }
+
+    // Trigger a data change event to update the UI
+    EventDispatcher.getInstance().emit('dataChanged', { action: 'import' });
   }
 
   /**
@@ -179,7 +235,6 @@ export default class TrackListModel {
         id: crypto.randomUUID(),
         name: playlistName,
         type: 'playlist',
-        children: [],
       };
       await this.baseService.addItem(playlist);
     } catch (error) {

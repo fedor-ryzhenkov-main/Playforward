@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import TrackListModel from './Model';
 import TrackListView from './View';
-import LibraryItem from '../../data/models/LibraryItem';
+import TreeNode from '../../data/models/TreeNode';
 
 /**
  * Controller component that manages the TrackListModel and communicates with the TrackListView.
@@ -12,7 +12,7 @@ const TrackListController: React.FC = () => {
     modelRef.current = new TrackListModel();
   }
   const model = modelRef.current;
-  const [trackTree, setTrackTree] = useState<LibraryItem[]>([]);
+  const [trackTree, setTrackTree] = useState<TreeNode[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [searchName, setSearchName] = useState<string>('');
@@ -136,7 +136,7 @@ const TrackListController: React.FC = () => {
       } catch (err) {
         console.error('Error importing data:', err);
         alert('Failed to import data.');
-      }
+      } 
     }
   };
 

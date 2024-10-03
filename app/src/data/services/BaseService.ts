@@ -5,6 +5,7 @@ import { ClosureTableRepository } from '../repositories/ClosureTableRepository';
 import EventDispatcher from '../events/EventDispatcher';
 import Playlist from '../models/Playlist';
 import Track from '../models/Track';
+import TreeNode from '../models/TreeNode';
 
 /**
  * Service for managing library items using the Closure Table approach.
@@ -191,24 +192,17 @@ export default class BaseService {
    * Builds the hierarchical tree from the Closure Table.
    * @returns An array of root LibraryItems with nested children.
    */
-  async buildTree(): Promise<LibraryItem[]> {
+  async buildTree(): Promise<TreeNode[]> {
     const allItems = await this.itemRepository.getAll();
     console.log('allItems', allItems);
     const closureEntries = await this.closureRepository.getAll();
     console.log('closureEntries', closureEntries);
 
-    const itemMap: Map<string, LibraryItem> = new Map();
+    const itemMap: Map<string, TreeNode> = new Map();
     allItems.forEach((item) => {
-      itemMap.set(item.id, { ...item });
+      itemMap.set(item.id, new TreeNode(item));
     });
     console.log('itemMap', itemMap);
-
-    // Initialize children arrays for playlists
-    itemMap.forEach((item) => {
-      if (item.type === 'playlist') {
-        (item as Playlist).children = [];
-      }
-    });
 
     // Process closure entries to establish parent-child relationships
     closureEntries
@@ -216,8 +210,8 @@ export default class BaseService {
       .forEach((entry) => {
         const parent = itemMap.get(entry.ancestorId);
         const child = itemMap.get(entry.descendantId);
-        if (parent && child && parent.type === 'playlist' && parent.id !== child.id) {
-          (parent as Playlist).children!.push(child);
+        if (parent && child && parent.item.type === 'playlist' && parent.item.id !== child.item.id) {
+          parent.children.push(child);
         }
       });
     console.log('closureEntries', closureEntries);
@@ -236,11 +230,12 @@ export default class BaseService {
     }
 
     return rootItems.map((root) => {
-      const rootItem = itemMap.get(root.id);
-      if (!rootItem) {
+      const rootNode = itemMap.get(root.id);
+      if (!rootNode) {
         console.error(`Root item with id ${root.id} not found in itemMap`);
+        throw new Error(`Root item with id ${root.id} not found in itemMap`);
       }
-      return rootItem!;
+      return rootNode;
     });
   }
 
@@ -253,5 +248,17 @@ export default class BaseService {
 
     // Emit dataChanged event
     EventDispatcher.getInstance().emit('dataChanged', { action: 'clear' });
+  }
+
+  async getAllClosureEntries(): Promise<ClosureEntry[]> {
+    return this.closureRepository.getAll();
+  }
+
+  async deleteAllClosureEntries(): Promise<void> {
+    await this.closureRepository.clear();
+  }
+
+  async addClosureEntry(entry: any): Promise<void> {
+    await this.closureRepository.add(entry);
   }
 }

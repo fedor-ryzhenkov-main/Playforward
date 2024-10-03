@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import LibraryItem from '../../data/models/LibraryItem';
+import TreeNode from '../../data/models/TreeNode';
 import Track from '../../data/models/Track';
 import TrackItem from '../TrackItem/TrackItem';
 import PlaylistItem from '../PlaylistItem/PlaylistItem';
@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Playlist from '../../data/models/Playlist';
 
 interface TrackListViewProps {
-  trackTree: LibraryItem[];
+  trackTree: TreeNode[];
   loading: boolean;
   error: string | null;
   searchName: string;
@@ -86,11 +86,16 @@ const TrackListView: React.FC<TrackListViewProps> = ({
     };
   }, [registerMenuItems, unregisterMenuItems]);
 
-  const renderItems = (items: LibraryItem[]): React.ReactNode => {
-    return items.map((item) => {
+  const renderItems = (nodes: TreeNode[]): React.ReactNode => {
+    return nodes.map((node) => {
+      const { item, children } = node;
       if (item.type === 'playlist') {
         const playlist = item as Playlist;
-        return <PlaylistItem key={playlist.id} playlist={playlist} />;
+        return (
+          <PlaylistItem key={playlist.id} playlist={playlist}>
+            {renderItems(children)}
+          </PlaylistItem>
+        );
       } else if (item.type === 'track') {
         const track = item as Track;
         return <TrackItem key={track.id} track={track} />;
