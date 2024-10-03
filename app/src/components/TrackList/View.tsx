@@ -59,6 +59,12 @@ const TrackListView: React.FC<TrackListViewProps> = ({
     fileInput.click();
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.target instanceof HTMLElement && !e.target.closest('.track-name')) {
+      e.preventDefault();
+    }
+  };
+
   useEffect(() => {
     const menuItems = [
       {
@@ -97,6 +103,7 @@ const TrackListView: React.FC<TrackListViewProps> = ({
       className="track-list-container" 
       id="track-list-container"
       data-contextmenu-id={contextMenuId.current}
+      onTouchStart={handleTouchStart}
     >
       <div className="search-container">
         <input
