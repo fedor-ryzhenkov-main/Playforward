@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useAudioPlayer } from '../../contexts/AudioPlayerContext';
+import { useContextMenu } from '../ContextMenu/Controller';
 import Track from '../../data/models/Track';
 import './TrackItem.css';
-import { useContextMenuRegistration } from '../../contexts/ContextMenuContext';
 import MoveItemModal from '../MoveItemModal/MoveItemModal';
 import BaseService from '../../data/services/BaseService';
 import { BaseRepository } from '../../data/repositories/BaseRepository';
+import { v4 as uuidv4 } from 'uuid';
 
 interface TrackItemProps {
   track: Track;
@@ -14,8 +15,9 @@ interface TrackItemProps {
 const TrackItem: React.FC<TrackItemProps> = React.memo(({ track }) => {
   const { playTrack, stopTrack, isPlaying } = useAudioPlayer();
   const baseService = new BaseService(new BaseRepository<Track>('libraryObjectStore'));
-  const { registerMenuItems } = useContextMenuRegistration();
+  const { registerMenuItems, unregisterMenuItems } = useContextMenu();
   const [isMoveModalOpen, setMoveModalOpen] = useState(false);
+  const contextMenuId = useRef(`track-${track.id}-${uuidv4()}`);
 
   const handleClick = () => {
     if (isPlaying(track.id)) {
@@ -25,54 +27,7 @@ const TrackItem: React.FC<TrackItemProps> = React.memo(({ track }) => {
     }
   };
 
-  useEffect(() => {
-    const handleAggregateContextMenu = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      if (customEvent.detail && typeof customEvent.detail.registerMenuItems === 'function') {
-        customEvent.detail.registerMenuItems([
-          {
-            label: 'Delete Track',
-            onClick: () => {
-              handleDeleteTrack();
-            },
-          },
-          {
-            label: 'Rename Track',
-            onClick: () => {
-              handleRenameTrack();
-            },
-          },
-          {
-            label: 'Edit Tags',
-            onClick: () => {
-              handleEditTags();
-            },
-          },
-          {
-            label: 'Edit Description',
-            onClick: () => {
-              handleEditDescription();
-            },
-          },
-          {
-            label: 'Move',
-            onClick: () => {
-              handleMoveTrack();
-            },
-          },
-        ]);
-      }
-    };
-
-    const element = document.getElementById(`track-item-${track.id}`);
-    element?.addEventListener('contextmenu-aggregate', handleAggregateContextMenu);
-
-    return () => {
-      element?.removeEventListener('contextmenu-aggregate', handleAggregateContextMenu);
-    };
-  }, [registerMenuItems, track]);
-
-  const handleDeleteTrack = async () => {
+  const handleDeleteTrack = useCallback(async () => {
     const confirmDelete = window.confirm(`Are you sure you want to delete "${track.name}"?`);
     if (confirmDelete) {
       try {
@@ -82,9 +37,9 @@ const TrackItem: React.FC<TrackItemProps> = React.memo(({ track }) => {
         alert('Failed to delete track.');
       }
     }
-  };
+  }, [baseService, track.id, track.name]);
 
-  const handleRenameTrack = async () => {
+  const handleRenameTrack = useCallback(async () => {
     const newName = prompt('Enter new track name:', track.name);
     if (newName && newName.trim() !== '') {
       try {
@@ -95,9 +50,9 @@ const TrackItem: React.FC<TrackItemProps> = React.memo(({ track }) => {
         alert('Failed to rename track.');
       }
     }
-  };
+  }, [baseService, track]);
 
-  const handleEditTags = async () => {
+  const handleEditTags = useCallback(async () => {
     const newTags = prompt('Enter comma-separated tags:', track.tags.join(', '));
     if (newTags !== null) {
       const tagsArray = newTags.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
@@ -109,9 +64,9 @@ const TrackItem: React.FC<TrackItemProps> = React.memo(({ track }) => {
         alert('Failed to update tags.');
       }
     }
-  };
+  }, [baseService, track]);
 
-  const handleEditDescription = async () => {
+  const handleEditDescription = useCallback(async () => {
     const newDescription = prompt('Enter new description:', track.description || '');
     if (newDescription !== null) {
       try {
@@ -122,17 +77,41 @@ const TrackItem: React.FC<TrackItemProps> = React.memo(({ track }) => {
         alert('Failed to update description.');
       }
     }
-  };
+  }, [baseService, track]);
 
-  const handleMoveTrack = () => {
+  const handleMoveTrack = useCallback(() => {
     setMoveModalOpen(true);
-  };
+  }, []);
+
+  useEffect(() => {
+    const menuItems = [
+      { label: 'Delete Track', onClick: handleDeleteTrack },
+      { label: 'Rename Track', onClick: handleRenameTrack },
+      { label: 'Edit Tags', onClick: handleEditTags },
+      { label: 'Edit Description', onClick: handleEditDescription },
+      { label: 'Move', onClick: handleMoveTrack },
+    ];
+
+    registerMenuItems(contextMenuId.current, menuItems);
+
+    return () => {
+      unregisterMenuItems(contextMenuId.current);
+    };
+  }, [
+    registerMenuItems,
+    unregisterMenuItems,
+    handleDeleteTrack,
+    handleRenameTrack,
+    handleEditTags,
+    handleEditDescription,
+    handleMoveTrack
+  ]);
 
   return (
     <>
       <div 
         className="track-item" 
-        id={`track-item-${track.id}`}
+        data-contextmenu-id={contextMenuId.current}
       >
         <div
           className={`track-info ${isPlaying(track.id) ? 'playing' : ''}`}
@@ -140,21 +119,21 @@ const TrackItem: React.FC<TrackItemProps> = React.memo(({ track }) => {
         >
           <div className="track-details">
             <div className="track-main-info">
-            <span className="track-name">{track.name}</span>
-            {track.description && (
-              <span className="track-description">{track.description}</span>
-            )}
+              <span className="track-name">{track.name}</span>
+              {track.description && (
+                <span className="track-description">{track.description}</span>
+              )}
             </div>
             <div>
-            {track.tags && track.tags.length > 0 && (
-              <div className="track-tags">
-                {track.tags.map((tag) => (
-                  <span key={tag} className="tag">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
+              {track.tags && track.tags.length > 0 && (
+                <div className="track-tags">
+                  {track.tags.map((tag) => (
+                    <span key={tag} className="tag">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

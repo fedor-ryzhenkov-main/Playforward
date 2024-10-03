@@ -3,7 +3,7 @@ import { Container, Typography } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import './App.css';
 import { AudioPlayerProvider } from './contexts/AudioPlayerContext';
-import { ContextMenuProvider } from './contexts/ContextMenuContext';
+import { ContextMenuProvider } from './components/ContextMenu/Controller';
 import TrackListController from './components/TrackList/Controller';
 
 const App: React.FC = () => {

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FaChevronRight, FaChevronDown } from 'react-icons/fa';
-import { useContextMenuRegistration } from '../../contexts/ContextMenuContext';
+import { useContextMenu } from '../ContextMenu/Controller';
 import MoveItemModal from '../MoveItemModal/MoveItemModal';
 import TrackItem from '../TrackItem/TrackItem';
 import Track from '../../data/models/Track';
@@ -9,67 +9,52 @@ import BaseService from '../../data/services/BaseService';
 import './PlaylistItem.css';
 import Playlist from '../../data/models/Playlist';
 import { BaseRepository } from '../../data/repositories/BaseRepository';
-
+import { v4 as uuidv4 } from 'uuid';
 
 interface PlaylistItemProps {
-  playlist: ResolvedPlaylist; // Use ResolvedPlaylist
+  playlist: ResolvedPlaylist;
 }
 
-/**
- * Component representing a single playlist item, which can be toggled to show or hide its contents.
- */
 const PlaylistItem: React.FC<PlaylistItemProps> = React.memo(({ playlist }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const { registerMenuItems } = useContextMenuRegistration();
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const baseService = new BaseService(new BaseRepository<Playlist>('libraryObjectStore'));
+  const { registerMenuItems, unregisterMenuItems } = useContextMenu();
+  const contextMenuId = useRef(`playlist-${playlist.id}-${uuidv4()}`);
 
   const toggleOpen = () => {
     setIsOpen(!isOpen);
   };
 
-  useEffect(() => {
-    const handleAggregateContextMenu = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      if (
-        customEvent.detail &&
-        typeof customEvent.detail.registerMenuItems === 'function'
-      ) {
-        customEvent.detail.registerMenuItems([
-          {
-            label: 'Move Playlist',
-            onClick: () => {
-              handleMovePlaylist();
-            },
-          },
-          {
-            label: 'Delete Playlist',
-            onClick: () => {
-              handleDeletePlaylist();
-            },
-          }
-        ]);
-      }
-    };
+  const handleMovePlaylist = useCallback(() => {
+    setIsMoveModalOpen(true);
+  }, []);
 
-    const element = document.getElementById(`playlist-item-${playlist.id}`);
-    element?.addEventListener('contextmenu-aggregate', handleAggregateContextMenu);
+  const handleDeletePlaylist = useCallback(() => {
+    const confirmDelete = window.confirm(`Are you sure you want to delete "${playlist.name}"?`);
+    if (confirmDelete) {
+      baseService.deleteItem(playlist.id);
+    }
+  }, [baseService, playlist.id, playlist.name]);
+
+  useEffect(() => {
+    const menuItems = [
+      {
+        label: 'Move Playlist',
+        onClick: handleMovePlaylist,
+      },
+      {
+        label: 'Delete Playlist',
+        onClick: handleDeletePlaylist,
+      },
+    ];
+
+    registerMenuItems(contextMenuId.current, menuItems);
 
     return () => {
-      element?.removeEventListener(
-        'contextmenu-aggregate',
-        handleAggregateContextMenu
-      );
+      unregisterMenuItems(contextMenuId.current);
     };
-  }, [registerMenuItems, playlist]);
-
-  const handleMovePlaylist = () => {
-    setIsMoveModalOpen(true);
-  };
-
-  const handleDeletePlaylist = () => {
-    baseService.deleteItem(playlist.id);
-  };
+  }, [registerMenuItems, unregisterMenuItems, handleMovePlaylist, handleDeletePlaylist]);
 
   const renderItems = (): React.ReactNode => {
     return playlist.items.map((item) => {
@@ -85,7 +70,11 @@ const PlaylistItem: React.FC<PlaylistItemProps> = React.memo(({ playlist }) => {
 
   return (
     <div className="playlist-item">
-      <div className="playlist-header" id={`playlist-item-${playlist.id}`} onClick={toggleOpen}>
+      <div 
+        className="playlist-header" 
+        onClick={toggleOpen}
+        data-contextmenu-id={contextMenuId.current}
+      >
         {isOpen ? <FaChevronDown /> : <FaChevronRight />}
         <span>{playlist.name}</span>
       </div>

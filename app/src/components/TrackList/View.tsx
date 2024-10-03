@@ -1,10 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import LibraryItem from '../../data/models/LibraryItem';
 import Track from '../../data/models/Track';
 import TrackItem from '../TrackItem/TrackItem';
 import PlaylistItem from '../PlaylistItem/PlaylistItem';
 import './Styles.css';
 import { ResolvedPlaylist } from '../../data/services/BaseService';
+import { useContextMenu } from '../ContextMenu/Controller';
+import { v4 as uuidv4 } from 'uuid';
 
 interface TrackListViewProps {
   trackTree: LibraryItem[];
@@ -20,9 +22,6 @@ interface TrackListViewProps {
   onImportData: () => void;
 }
 
-/**
- * Presentational component for displaying the track list, search inputs, and actions.
- */
 const TrackListView: React.FC<TrackListViewProps> = ({
   trackTree,
   loading,
@@ -36,9 +35,9 @@ const TrackListView: React.FC<TrackListViewProps> = ({
   onExportData,
   onImportData,
 }) => {
-  /**
-   * Handles the creation of a new playlist via prompt.
-   */
+  const { registerMenuItems, unregisterMenuItems } = useContextMenu();
+  const contextMenuId = useRef(`tracklist-${uuidv4()}`);
+
   const handleCreatePlaylist = () => {
     const playlistName = prompt('Enter playlist name:');
     if (playlistName && playlistName.trim() !== '') {
@@ -46,9 +45,6 @@ const TrackListView: React.FC<TrackListViewProps> = ({
     }
   };
 
-  /**
-   * Handles the upload of a new track via file input.
-   */
   const handleUploadTrack = () => {
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
@@ -63,11 +59,25 @@ const TrackListView: React.FC<TrackListViewProps> = ({
     fileInput.click();
   };
 
-  /**
-   * Renders the hierarchical list of tracks and playlists.
-   * @param items The array of LibraryItems to render.
-   * @returns A React node representing the list.
-   */
+  useEffect(() => {
+    const menuItems = [
+      {
+        label: 'Create Playlist',
+        onClick: handleCreatePlaylist,
+      },
+      {
+        label: 'Upload Track',
+        onClick: handleUploadTrack,
+      },
+    ];
+
+    registerMenuItems(contextMenuId.current, menuItems);
+
+    return () => {
+      unregisterMenuItems(contextMenuId.current);
+    };
+  }, [registerMenuItems, unregisterMenuItems]);
+
   const renderItems = (items: LibraryItem[]): React.ReactNode => {
     return items.map((item) => {
       if (item.type === 'playlist') {
@@ -82,43 +92,12 @@ const TrackListView: React.FC<TrackListViewProps> = ({
     });
   };
 
-  useEffect(() => {
-    const handleContextMenu = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      if (
-        customEvent.detail &&
-        typeof customEvent.detail.registerMenuItems === 'function'
-      ) {
-        customEvent.detail.registerMenuItems([
-          {
-            label: 'Create Playlist',
-            onClick: () => {
-              handleCreatePlaylist();
-            },
-          },
-          {
-            label: 'Upload Track',
-            onClick: () => {
-              handleUploadTrack();
-            },
-          },
-        ]);
-      }
-    };
-
-    const element = document.getElementById('track-list-container');
-    element?.addEventListener('contextmenu-aggregate', handleContextMenu);
-
-    return () => {
-      element?.removeEventListener(
-        'contextmenu-aggregate',
-        handleContextMenu
-      );
-    };
-  }, [onCreatePlaylist, onUploadTrack]);
-
   return (
-    <div className="track-list-container" id="track-list-container">
+    <div 
+      className="track-list-container" 
+      id="track-list-container"
+      data-contextmenu-id={contextMenuId.current}
+    >
       <div className="search-container">
         <input
           type="text"

@@ -1,10 +1,6 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import './ContextMenu.css';
-
-export interface ContextMenuItem {
-  label: string;
-  onClick: () => void;
-}
+import { ContextMenuItem } from './Controller';
 
 interface ContextMenuProps {
   x: number;
@@ -14,21 +10,6 @@ interface ContextMenuProps {
 }
 
 const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }) => {
-  useEffect(() => {
-    const handleClick = () => {
-      onClose();
-    };
-    const handleScroll = () => {
-      onClose();
-    };
-    window.addEventListener('click', handleClick);
-    window.addEventListener('scroll', handleScroll);
-    return () => {
-      window.removeEventListener('click', handleClick);
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, [onClose]);
-
   return (
     <ul className="context-menu" style={{ top: y, left: x }}>
       {items.map((item, index) => (
