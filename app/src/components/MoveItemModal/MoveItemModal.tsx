@@ -1,95 +1,106 @@
 import React, { useState, useEffect } from 'react';
 import './MoveItemModal.css';
 import LibraryItem from '../../data/models/LibraryItem';
-import BaseService, { ResolvedPlaylist } from '../../data/services/BaseService';
-import { BaseRepository } from '../../data/repositories/BaseRepository';
-import EventDispatcher from '../../data/events/EventDispatcher';
+import BaseService from '../../data/services/BaseService';
 import Playlist from '../../data/models/Playlist';
 
 interface MoveItemModalProps {
   item: LibraryItem;
   onClose: () => void;
-  onMove: () => void;
+  onSubmit: (playlistId?: string) => void;
 }
 
-const MoveItemModal: React.FC<MoveItemModalProps> = ({
-  item,
-  onClose,
-  onMove,
-}) => {
-  const [playlists, setPlaylists] = useState<ResolvedPlaylist[]>([]);
-  const [filteredPlaylists, setFilteredPlaylists] = useState<ResolvedPlaylist[]>([]);
+const MoveItemModal: React.FC<MoveItemModalProps> = ({ item, onClose, onSubmit }) => {
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [filteredPlaylists, setFilteredPlaylists] = useState<Playlist[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const baseService = new BaseService(new BaseRepository<LibraryItem>('libraryObjectStore'));
+  const [descendantIds, setDescendantIds] = useState<Set<string>>(new Set());
+  const baseService = new BaseService();
 
   useEffect(() => {
     const loadPlaylists = async () => {
-      const allItems = await baseService.getAllItems();
-      const playlistItems = allItems.filter(item => item.type === 'playlist') as Playlist[];
-      const resolvedTree = await baseService.buildTree(playlistItems);
-      const allPlaylists = flattenTree(resolvedTree);
+      const tree = await baseService.buildTree();
+      const allPlaylists = flattenPlaylists(tree);
       setPlaylists(allPlaylists);
-      setFilteredPlaylists(allPlaylists);
+
+      if (item.type === 'playlist') {
+        const ids = getDescendantIds(item as Playlist);
+        setDescendantIds(new Set(ids));
+      } else {
+        setDescendantIds(new Set());
+      }
     };
     loadPlaylists();
-  }, [baseService]);
+  }, [item]);
 
-  // Helper function to flatten the tree structure
-  const flattenTree = (tree: (LibraryItem | ResolvedPlaylist)[]): ResolvedPlaylist[] => {
-    const flattened: ResolvedPlaylist[] = [];
-    const stack = [...tree];
+  const flattenPlaylists = (items: LibraryItem[]): Playlist[] => {
+    const playlists: Playlist[] = [];
+    const stack = [...items];
+
     while (stack.length > 0) {
-      const item = stack.pop();
-      if (item && item.type === 'playlist') {
-        flattened.push(item as ResolvedPlaylist);
-        if ((item as ResolvedPlaylist).items) {
-          stack.push(...(item as ResolvedPlaylist).items);
+      const currentItem = stack.pop();
+
+      if (currentItem && currentItem.type === 'playlist') {
+        const playlist = currentItem as Playlist;
+        playlists.push(playlist);
+
+        if (playlist.children && playlist.children.length > 0) {
+          stack.push(...playlist.children);
         }
       }
     }
-    return flattened;
+
+    return playlists;
+  };
+
+  const getDescendantIds = (playlist: Playlist): string[] => {
+    let ids: string[] = [];
+    if (playlist.children) {
+      for (const child of playlist.children) {
+        ids.push(child.id);
+        if (child.type === 'playlist') {
+          ids = ids.concat(getDescendantIds(child as Playlist));
+        }
+      }
+    }
+    return ids;
   };
 
   useEffect(() => {
     let filtered = playlists;
+
     if (searchTerm.trim() !== '') {
       const lowerSearchTerm = searchTerm.toLowerCase();
       filtered = playlists.filter((playlist) =>
-        playlist.fullPath.toLowerCase().includes(lowerSearchTerm)
+        playlist.name.toLowerCase().includes(lowerSearchTerm)
       );
     }
-    // Filter out the current playlist to prevent moving under itself
+
     if (item.type === 'playlist') {
-      filtered = filtered.filter((playlist) => playlist.id !== item.id);
+      // Exclude the item itself and its descendants
+      filtered = filtered.filter(
+        (playlist) => playlist.id !== item.id && !descendantIds.has(playlist.id)
+      );
     }
+
     setFilteredPlaylists(filtered);
-  }, [searchTerm, playlists, item]);
+  }, [searchTerm, playlists, item, descendantIds]);
 
   const handleMove = async (playlistId?: string) => {
-    if (item.parentId === playlistId) {
-      // No change in parentId, do nothing
-      onMove();
-      return;
-    }
-
     try {
-      await baseService.updateItem({ ...item, parentId: playlistId || undefined });
-      EventDispatcher.getInstance().emit('dataChanged'); // Emit only on actual move
-      onMove();
+      await baseService.moveItem(item.id, playlistId);
+      onSubmit(playlistId);
     } catch (error) {
       console.error('Error moving item:', error);
-      alert('Failed to move item.');
+      alert('Failed to move item. ' + (error as Error).message);
     }
   };
 
   const renderPlaylistList = (): React.ReactNode => {
     return filteredPlaylists.map((playlist) => (
       <div key={playlist.id} className="playlist-item">
-        <div
-          className="playlist-name"
-          onClick={() => handleMove(playlist.id)}
-        >
-          {playlist.fullPath}
+        <div className="playlist-name" onClick={() => handleMove(playlist.id)}>
+          {playlist.name}
         </div>
       </div>
     ));
@@ -112,7 +123,9 @@ const MoveItemModal: React.FC<MoveItemModalProps> = ({
         </div>
         {renderPlaylistList()}
       </div>
-      <button onClick={onClose}>Cancel</button>
+      <div className="modal-buttons">
+        <button onClick={onClose}>Cancel</button>
+      </div>
     </div>
   );
 };

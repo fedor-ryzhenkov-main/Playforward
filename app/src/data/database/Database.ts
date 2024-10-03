@@ -1,26 +1,57 @@
+import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { v4 as uuidv4 } from 'uuid';
 
-let db: IDBDatabase;
+interface MyDB extends DBSchema {
+  libraryItems: {
+    key: string;
+    value: {
+      id: string;
+      name: string;
+      type: 'track' | 'playlist';
+      data?: ArrayBuffer;
+      tags?: string[];
+      description?: string;
+    };
+    indexes: { 'type': string };
+  };
+  closureTable: {
+    key: [string, string]; // Composite key for ancestorId and descendantId
+    value: {
+      ancestorId: string;
+      descendantId: string;
+      depth: number;
+    };
+    indexes: {
+      'ancestorId': string;
+      'descendantId': string;
+      'ancestor_descendant': [string, string];
+    };
+  };
+}
 
-const initDB = (): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open('libraryDatabase', 2);
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => {
-      db = request.result;
-      resolve();
-    };
-    request.onupgradeneeded = (event) => {
-      const db = request.result;
-      if (event.oldVersion < 1) {
-        db.createObjectStore('libraryObjectStore', { keyPath: 'id' });
-      }
-    };
-  });
-};
-const getDB = async (): Promise<IDBDatabase> => {
-  if (!db) await initDB();
+let db: IDBPDatabase<MyDB>;
+
+export async function getDB(): Promise<IDBPDatabase<MyDB>> {
+  if (!db) {
+    db = await openDB<MyDB>('myDatabase', 2, { // Incremented version to apply changes
+      upgrade(database) {
+        // Create 'libraryItems' store if it doesn't exist
+        if (!database.objectStoreNames.contains('libraryItems')) {
+          const libraryStore = database.createObjectStore('libraryItems', { keyPath: 'id' });
+          libraryStore.createIndex('type', 'type');
+        }
+
+        // Create 'closureTable' store with composite keyPath if it doesn't exist
+        if (!database.objectStoreNames.contains('closureTable')) {
+          const closureStore = database.createObjectStore('closureTable', { keyPath: ['ancestorId', 'descendantId'] });
+          closureStore.createIndex('ancestorId', 'ancestorId');
+          closureStore.createIndex('descendantId', 'descendantId');
+          closureStore.createIndex('ancestor_descendant', ['ancestorId', 'descendantId'], { unique: true });
+        }
+      },
+    });
+  }
   return db;
-};
+}
 
-export { getDB, uuidv4 };
+export { uuidv4 };

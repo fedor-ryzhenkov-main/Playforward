@@ -4,8 +4,6 @@ import AudioPlayerView from './View';
 import AudioPlayerModel from './Model';
 import { AudioPlayerState } from './Interfaces';
 import BaseService from '../../data/services/BaseService';
-import { BaseRepository } from '../../data/repositories/BaseRepository';
-import LibraryItem from '../../data/models/LibraryItem';
 
 interface AudioPlayerControllerProps {
   trackId: string;
@@ -23,7 +21,7 @@ const AudioPlayerController: React.FC<AudioPlayerControllerProps> = ({ trackId, 
     isFadeEffectActive: false,
   });
 
-  const baseService = useRef(new BaseService(new BaseRepository<LibraryItem>('libraryObjectStore'))).current;
+  const baseService = useRef(new BaseService()).current;
 
   const handleModelUpdates = useCallback((state: Partial<AudioPlayerState>) => {
     setPlayerState(prevState => ({

@@ -1,80 +1,83 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FaChevronRight, FaChevronDown } from 'react-icons/fa';
-import { useContextMenu } from '../ContextMenu/Controller';
+import { ContextMenuItem, useContextMenu } from '../../contexts/ContextMenuContext';
 import MoveItemModal from '../MoveItemModal/MoveItemModal';
 import TrackItem from '../TrackItem/TrackItem';
 import Track from '../../data/models/Track';
-import { ResolvedPlaylist } from '../../data/services/BaseService';
-import BaseService from '../../data/services/BaseService';
-import './PlaylistItem.css';
 import Playlist from '../../data/models/Playlist';
-import { BaseRepository } from '../../data/repositories/BaseRepository';
-import { v4 as uuidv4 } from 'uuid';
-import { ContextMenuItem } from '../ContextMenu/Controller';
+import './PlaylistItem.css';
+import BaseService from '../../data/services/BaseService';
 
+/**
+ * Props for the PlaylistItem component.
+ */
 interface PlaylistItemProps {
-  playlist: ResolvedPlaylist;
+  playlist: Playlist;
 }
 
+/**
+ * PlaylistItem component responsible for rendering a playlist and its children.
+ */
 const PlaylistItem: React.FC<PlaylistItemProps> = React.memo(({ playlist }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const baseService = new BaseService(new BaseRepository<Playlist>('libraryObjectStore'));
-  const { registerMenuItems, unregisterMenuItems, openModal, closeModal } = useContextMenu();
-  const contextMenuId = useRef(`playlist-${playlist.id}-${uuidv4()}`);
+  const { registerMenuItems, unregisterMenuItems } = useContextMenu();
+  const contextMenuId = useRef(`playlist-${playlist.id}`);
+  const [isExpanded, setIsExpanded] = useState<boolean>(false);
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState<boolean>(false);
+  const baseService = new BaseService();
 
-  const toggleOpen = () => {
-    setIsOpen(!isOpen);
+  /**
+   * Handles toggling the expansion of the playlist.
+   */
+  const toggleExpand = () => {
+    setIsExpanded(!isExpanded);
   };
 
-  const handleDeletePlaylist = useCallback(() => {
-    const confirmDelete = window.confirm(`Are you sure you want to delete "${playlist.name}"?`);
-    if (confirmDelete) {
-      baseService.deleteItem(playlist.id);
-    }
-  }, [baseService, playlist.id, playlist.name]);
+  /**
+   * Opens the move item modal.
+   */
+  const openMoveModal = () => {
+    setIsMoveModalOpen(true);
+  };
+
+  /**
+   * Closes the move item modal.
+   */
+  const closeMoveModal = () => {
+    setIsMoveModalOpen(false);
+  };
+
+  /**
+   * Handles moving the playlist to a new parent.
+   * @param newParentId The ID of the new parent playlist.
+   */
+  const handleMove = async (newParentId?: string) => {
+    await baseService.moveItem(playlist.id, newParentId);
+  };
 
   useEffect(() => {
-    const menuItems: ContextMenuItem[] = [
-      {
-        type: 'modal',
-        label: 'Move Playlist',
-        modalContent: () => (
-          <MoveItemModal
-            item={playlist}
-            onClose={closeModal}
-            onMove={() => {
-              closeModal();
-              // Refresh logic if necessary
-            }}
-          />
-        ),
-      },
+    const menuItems = [
       {
         type: 'action',
-        label: 'Delete Playlist',
-        onClick: handleDeletePlaylist,
+        label: 'Move Playlist',
+        onClick: openMoveModal,
       },
-    ];
+    ] as ContextMenuItem[];
 
     registerMenuItems(contextMenuId.current, menuItems);
 
     return () => {
       unregisterMenuItems(contextMenuId.current);
     };
-  }, [
-    registerMenuItems,
-    unregisterMenuItems,
-    contextMenuId,
-    closeModal,
-    playlist,
-  ]);
+  }, [registerMenuItems, unregisterMenuItems]);
 
-  const renderItems = (): React.ReactNode => {
-    return playlist.items.map((item) => {
-      if (item.type === 'playlist') {
-        return <PlaylistItem key={item.id} playlist={item as ResolvedPlaylist} />;
-      } else if (item.type === 'track') {
-        return <TrackItem key={item.id} track={item as Track} />;
+  const renderChildren = () => {
+    if (!isExpanded || !playlist.children) return null;
+
+    return playlist.children.map((child) => {
+      if (child.type === 'playlist') {
+        return <PlaylistItem key={child.id} playlist={child as Playlist} />;
+      } else if (child.type === 'track') {
+        return <TrackItem key={child.id} track={child as Track} />;
       } else {
         return null;
       }
@@ -82,19 +85,18 @@ const PlaylistItem: React.FC<PlaylistItemProps> = React.memo(({ playlist }) => {
   };
 
   return (
-    <div className="playlist-item">
-      <div 
-        className="playlist-header" 
-        onClick={toggleOpen}
-        data-contextmenu-id={contextMenuId.current}
-      >
-        {isOpen ? <FaChevronDown /> : <FaChevronRight />}
+    <div className="playlist-item" data-contextmenu-id={contextMenuId.current}>
+      <div className="playlist-header" onClick={toggleExpand}>
+        {isExpanded ? <FaChevronDown /> : <FaChevronRight />}
         <span>{playlist.name}</span>
       </div>
-      {isOpen && (
-        <div className="playlist-content">
-          {renderItems()}
-        </div>
+      {isExpanded && <div className="playlist-children">{renderChildren()}</div>}
+      {isMoveModalOpen && (
+        <MoveItemModal
+          item={playlist}
+          onClose={closeMoveModal}
+          onSubmit={handleMove}
+        />
       )}
     </div>
   );

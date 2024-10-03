@@ -3,8 +3,9 @@ import { Container, Typography } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import './App.css';
 import { AudioPlayerProvider } from './contexts/AudioPlayerContext';
-import { ContextMenuProvider } from './components/ContextMenu/Controller';
+import { ContextMenuProvider } from './contexts/ContextMenuContext';
 import TrackListController from './components/TrackList/Controller';
+import { ModalProvider } from './contexts/ModalContext';
 
 const App: React.FC = () => {
   return (
@@ -14,11 +15,13 @@ const App: React.FC = () => {
       </Typography>
       <Grid container flexDirection="column" spacing={3} justifyContent="center" alignItems="center">
         <div style={{ width: '100%' }}>
-          <ContextMenuProvider>
-            <AudioPlayerProvider>
-              <TrackListController />
-            </AudioPlayerProvider>
-          </ContextMenuProvider>
+          <ModalProvider>
+            <ContextMenuProvider>
+              <AudioPlayerProvider>
+                <TrackListController />
+              </AudioPlayerProvider>
+            </ContextMenuProvider>
+          </ModalProvider>
         </div>
       </Grid>
     </Container>

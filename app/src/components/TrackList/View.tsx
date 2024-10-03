@@ -4,9 +4,9 @@ import Track from '../../data/models/Track';
 import TrackItem from '../TrackItem/TrackItem';
 import PlaylistItem from '../PlaylistItem/PlaylistItem';
 import './Styles.css';
-import { ResolvedPlaylist } from '../../data/services/BaseService';
-import { ContextMenuItem, useContextMenu } from '../ContextMenu/Controller';
+import { ContextMenuItem, useContextMenu } from '../../contexts/ContextMenuContext';
 import { v4 as uuidv4 } from 'uuid';
+import Playlist from '../../data/models/Playlist';
 
 interface TrackListViewProps {
   trackTree: LibraryItem[];
@@ -89,7 +89,7 @@ const TrackListView: React.FC<TrackListViewProps> = ({
   const renderItems = (items: LibraryItem[]): React.ReactNode => {
     return items.map((item) => {
       if (item.type === 'playlist') {
-        const playlist = item as ResolvedPlaylist;
+        const playlist = item as Playlist;
         return <PlaylistItem key={playlist.id} playlist={playlist} />;
       } else if (item.type === 'track') {
         const track = item as Track;

@@ -1,167 +1,257 @@
 import LibraryItem from '../models/LibraryItem';
+import ClosureEntry from '../models/ClosureEntry';
+import { ItemRepository } from '../repositories/ItemRepository';
+import { ClosureTableRepository } from '../repositories/ClosureTableRepository';
+import EventDispatcher from '../events/EventDispatcher';
 import Playlist from '../models/Playlist';
 import Track from '../models/Track';
-import { BaseRepository } from '../repositories/BaseRepository';
 
 /**
- * Represents a resolved playlist with its child items.
- */
-export interface ResolvedPlaylist extends Omit<Playlist, 'items'> {
-  items: LibraryItem[];
-  fullPath: string;
-}
-
-/**
- * Service for managing hierarchical relationships between LibraryItems.
+ * Service for managing library items using the Closure Table approach.
  */
 export default class BaseService {
-  private repository: BaseRepository<LibraryItem>;
+  private itemRepository: ItemRepository;
+  private closureRepository: ClosureTableRepository;
 
-  constructor(repository: BaseRepository<LibraryItem>) {
-    this.repository = repository;
+  constructor() {
+    this.itemRepository = new ItemRepository();
+    this.closureRepository = new ClosureTableRepository();
   }
 
+  /**
+   * Retrieves an item from the library by its ID.
+   * @param id The ID of the item to retrieve.
+   * @returns A Promise that resolves to the LibraryItem if found, or null if not found.
+   */
   async getItem(id: string): Promise<LibraryItem | null> {
-    return await this.repository.getById(id);
-  }
-
-  async getAllItems(type?: string): Promise<LibraryItem[]> {
-    const all = await this.repository.getAll();
-    if (type) {
-      return all.filter((item) => item.type === type);
+    try {
+      const item = await this.itemRepository.getById(id);
+      return item;
+    } catch (error) {
+      console.error(`Error retrieving item with ID ${id}:`, error);
+      return null;
     }
-    return all;
   }
 
+  /**
+   * Adds a new item to the library.
+   * @param item The item to add.
+   */
   async addItem(item: LibraryItem): Promise<void> {
-    await this.repository.add(item);
+    await this.itemRepository.add(item);
+
+    // Add self-reference in the closure table
+    const selfEntry: ClosureEntry = {
+      ancestorId: item.id,
+      descendantId: item.id,
+      depth: 0,
+    };
+    await this.closureRepository.add(selfEntry);
+
+    // Emit dataChanged event
+    EventDispatcher.getInstance().emit('dataChanged', { action: 'add', item });
   }
 
   /**
-   * Deletes an item and its children recursively.
-   * @param id The ID of the item to delete.
+   * Updates an existing item in the library.
+   * @param item The item with updated properties.
    */
-  async deleteItem(id: string): Promise<void> {
-    const item = await this.repository.getById(id);
-    if (item) {
-      // If the item is a playlist, delete its children recursively
-      if (item.type === 'playlist') {
-        const playlist = item as Playlist;
-        for (const childId of playlist.items) {
-          await this.deleteItem(childId);
-        }
-      }
-      await this.repository.delete(id);
-    }
-  }
+  async updateItem(item: LibraryItem): Promise<void> {
+    await this.itemRepository.update(item);
 
-  async deleteAllItems(): Promise<void> {
-    await this.repository.clear();
+    // Emit dataChanged event
+    EventDispatcher.getInstance().emit('dataChanged', { action: 'update', item });
   }
 
   /**
-   * Updates an item and synchronizes parent-child relationships.
-   * @param item The item to update.
+   * Deletes an item and all its descendants from the library.
+   * @param itemId The ID of the item to delete.
    */
-  async updateItem(item: LibraryItem | Track | Playlist): Promise<void> {
-    const existingItem = await this.repository.getById(item.id);
+  async deleteItem(itemId: string): Promise<void> {
+    // Find all descendants
+    const descendants = await this.closureRepository.getDescendants(itemId);
 
-    if (existingItem) {
-      // If parentId has changed, update the old and new parents
-      if (existingItem.parentId !== item.parentId) {
-        if (existingItem.parentId) {
-          const oldParent = await this.repository.getById(existingItem.parentId);
-          if (oldParent && oldParent.type === 'playlist') {
-            (oldParent as Playlist).items = (oldParent as Playlist).items.filter((id) => id !== item.id);
-            await this.repository.update(oldParent);
-          }
-        }
-
-        if (item.parentId) {
-          const newParent = await this.repository.getById(item.parentId);
-          if (newParent && newParent.type === 'playlist') {
-            (newParent as Playlist).items.push(item.id);
-            await this.repository.update(newParent);
-          }
-        }
-      }
-
-      // If children have changed, update the children's parentId
-      if (existingItem.type === 'playlist') {
-        const existingChildren = (existingItem as Playlist).items;
-        const newChildren = (item as Playlist).items;
-
-        // Find removed children
-        const removedChildren = existingChildren.filter((id) => !newChildren.includes(id));
-        for (const childId of removedChildren) {
-          const child = await this.repository.getById(childId);
-          if (child) {
-            child.parentId = undefined;
-            await this.repository.update(child);
-          }
-        }
-
-        // Find added children
-        const addedChildren = newChildren.filter((id) => !existingChildren.includes(id));
-        for (const childId of addedChildren) {
-          const child = await this.repository.getById(childId);
-          if (child) {
-            child.parentId = item.id;
-            await this.repository.update(child);
-          }
-        }
-      }
-    }
-
-    await this.repository.update(item);
-  }
-
-  /**
-   * Builds a hierarchical tree structure from the given items.
-   * @param items The flat array of LibraryItems.
-   * @returns The hierarchical tree of LibraryItems.
-   */
-  async buildTree(items: LibraryItem[]): Promise<LibraryItem[]> {
-    const itemMap = new Map<string, LibraryItem>();
-
-    // Create a map of items by their ID
-    items.forEach(item => itemMap.set(item.id, item));
-
-    // Build the tree structure
-    const rootItems: LibraryItem[] = [];
-    for (const item of items) {
-      if (!item.parentId) {
-        rootItems.push(await this.resolveItem(item, itemMap));
-      }
-    }
-
-    return rootItems;
-  }
-
-  /**
-   * Recursively resolves a LibraryItem and its children.
-   * @param item The LibraryItem to resolve.
-   * @param itemMap A map of item IDs to LibraryItems.
-   * @param parentPath The path to the parent item.
-   * @returns The resolved LibraryItem with its children.
-   */
-  private async resolveItem(item: LibraryItem, itemMap: Map<string, LibraryItem>, parentPath: string = ''): Promise<LibraryItem | ResolvedPlaylist> {
-    if (item.type === 'playlist') {
-      const playlist = item as Playlist;
-      const resolvedItems = await Promise.all(
-        playlist.items
-          .map(itemId => itemMap.get(itemId))
-          .filter((child): child is LibraryItem => child !== undefined)
-          .map(childItem => this.resolveItem(childItem, itemMap, `${parentPath}${playlist.name}/`))
+    // Delete closure entries and items
+    for (const descendant of descendants) {
+      await this.itemRepository.delete(descendant.descendantId);
+      await this.closureRepository.deleteByAncestorDescendant(
+        descendant.ancestorId,
+        descendant.descendantId
       );
-
-      const fullPath = `${parentPath}${playlist.name}`;
-      return {
-        ...playlist,
-        items: resolvedItems,
-        fullPath: fullPath,
-      };
     }
-    return item as Track;
+
+    // Emit dataChanged event
+    EventDispatcher.getInstance().emit('dataChanged', { action: 'delete', id: itemId });
+  }
+
+  /**
+   * Moves an item to a new parent.
+   * @param itemId The ID of the item to move.
+   * @param newParentId Optional new parent ID (undefined for root).
+   */
+  async moveItem(itemId: string, newParentId?: string): Promise<void> {
+    // Step 1: Prevent moving an item under itself or its descendants
+    if (newParentId) {
+      const isDescendant = await this.isDescendant(itemId, newParentId);
+      if (isDescendant || itemId === newParentId) {
+        throw new Error('Cannot move an item under itself or its descendant.');
+      }
+    }
+
+    // Step 2: Get all ancestors of the item being moved
+    const oldAncestors = await this.closureRepository.getAncestors(itemId);
+    console.log('oldAncestors', oldAncestors);
+
+    // Step 3: Get all descendants of the item being moved (including itself)
+    const descendants = await this.closureRepository.getDescendants(itemId);
+    console.log('descendants', descendants);
+
+    // Delete old closure entries
+    const entriesToDelete = oldAncestors
+      .filter(ancestor => ancestor.ancestorId !== itemId)
+      .flatMap(ancestor => descendants.map(descendant => ({
+        ancestorId: ancestor.ancestorId,
+        descendantId: descendant.descendantId,
+      })));
+    
+    await this.closureRepository.deleteEntries(entriesToDelete);
+
+    // Insert new closure entries
+    if (newParentId) {
+      const newParentAncestors = await this.closureRepository.getAncestors(newParentId);
+      const newEntries: ClosureEntry[] = [];
+
+      for (const ancestor of newParentAncestors) {
+        for (const descendant of descendants) {
+          // Check if the relationship already exists
+          const existingEntry = await this.closureRepository.getById([ancestor.ancestorId, descendant.descendantId]);
+          if (!existingEntry) {
+            newEntries.push({
+              ancestorId: ancestor.ancestorId,
+              descendantId: descendant.descendantId,
+              depth: ancestor.depth + descendant.depth + 1,
+            });
+          }
+        }
+      }
+
+      // Include self-relations if they don't exist
+      for (const descendant of descendants) {
+        const existingSelfRelation = await this.closureRepository.getById([descendant.descendantId, descendant.descendantId]);
+        if (!existingSelfRelation) {
+          newEntries.push({
+            ancestorId: descendant.descendantId,
+            descendantId: descendant.descendantId,
+            depth: 0,
+          });
+        }
+      }
+
+      await this.closureRepository.addEntries(newEntries);
+    } else {
+      // Moving to root: only add self-relations if they don't exist
+      const selfEntries = [];
+      for (const descendant of descendants) {
+        const existingSelfRelation = await this.closureRepository.getById([descendant.descendantId, descendant.descendantId]);
+        if (!existingSelfRelation) {
+          selfEntries.push({
+            ancestorId: descendant.descendantId,
+            descendantId: descendant.descendantId,
+            depth: 0,
+          });
+        }
+      }
+      await this.closureRepository.addEntries(selfEntries);
+    }
+
+    // Emit dataChanged event
+    EventDispatcher.getInstance().emit('dataChanged', { action: 'move', itemId, newParentId });
+  }
+
+  /**
+   * Checks if one item is a descendant of another.
+   * @param ancestorId The potential ancestor ID.
+   * @param descendantId The potential descendant ID.
+   * @returns True if descendantId is a descendant of ancestorId.
+   */
+  private async isDescendant(ancestorId: string, descendantId: string): Promise<boolean> {
+    const ancestors = await this.closureRepository.getAncestors(descendantId);
+    return ancestors.some((entry) => entry.ancestorId === ancestorId);
+  }
+
+  /**
+   * Retrieves all items from the library.
+   * @returns An array of all LibraryItems.
+   */
+  async getAllItems(): Promise<LibraryItem[]> {
+    return await this.itemRepository.getAll();
+  }
+
+  /**
+   * Builds the hierarchical tree from the Closure Table.
+   * @returns An array of root LibraryItems with nested children.
+   */
+  async buildTree(): Promise<LibraryItem[]> {
+    const allItems = await this.itemRepository.getAll();
+    console.log('allItems', allItems);
+    const closureEntries = await this.closureRepository.getAll();
+    console.log('closureEntries', closureEntries);
+
+    const itemMap: Map<string, LibraryItem> = new Map();
+    allItems.forEach((item) => {
+      itemMap.set(item.id, { ...item });
+    });
+    console.log('itemMap', itemMap);
+
+    // Initialize children arrays for playlists
+    itemMap.forEach((item) => {
+      if (item.type === 'playlist') {
+        (item as Playlist).children = [];
+      }
+    });
+
+    // Process closure entries to establish parent-child relationships
+    closureEntries
+      .filter((entry) => entry.depth === 1)
+      .forEach((entry) => {
+        const parent = itemMap.get(entry.ancestorId);
+        const child = itemMap.get(entry.descendantId);
+        if (parent && child && parent.type === 'playlist' && parent.id !== child.id) {
+          (parent as Playlist).children!.push(child);
+        }
+      });
+    console.log('closureEntries', closureEntries);
+    
+    // Identify root items (items with no ancestors other than themselves)
+    const rootItems = allItems.filter((item) => {
+      const ancestors = closureEntries.filter(
+        (entry) => entry.descendantId === item.id && entry.ancestorId !== item.id
+      );
+      return ancestors.length === 0; // No ancestors other than self
+    });
+    console.log('rootItems', rootItems);
+
+    if (rootItems.length === 0) {
+      console.warn('No root items found. This might indicate an issue with the closure table.');
+    }
+
+    return rootItems.map((root) => {
+      const rootItem = itemMap.get(root.id);
+      if (!rootItem) {
+        console.error(`Root item with id ${root.id} not found in itemMap`);
+      }
+      return rootItem!;
+    });
+  }
+
+  /**
+   * Deletes all items from the library.
+   */
+  async deleteAllItems(): Promise<void> {
+    await this.itemRepository.clear();
+    await this.closureRepository.clear();
+
+    // Emit dataChanged event
+    EventDispatcher.getInstance().emit('dataChanged', { action: 'clear' });
   }
 }

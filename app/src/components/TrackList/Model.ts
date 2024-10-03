@@ -2,9 +2,9 @@ import { saveAs } from 'file-saver';
 import Track from '../../data/models/Track';
 import Playlist from '../../data/models/Playlist';
 import LibraryItem from '../../data/models/LibraryItem';
-import BaseService, { ResolvedPlaylist } from '../../data/services/BaseService';
-import { BaseRepository } from '../../data/repositories/BaseRepository';
+import BaseService from '../../data/services/BaseService';
 import EventDispatcher from '../../data/events/EventDispatcher';
+
 /**
  * Manages the track and playlist tree structure.
  */
@@ -14,15 +14,8 @@ export default class TrackListModel {
   private searchTags: string = '';
 
   constructor() {
-    this.baseService = new BaseService(new BaseRepository<LibraryItem>('libraryObjectStore'));
-  }
-
-  /**
-   * Determines if a search query is active.
-   * @returns True if either searchName or searchTags is non-empty, false otherwise.
-   */
-  private isSearchActive(): boolean {
-    return this.searchName.trim() !== '' || this.searchTags.trim() !== '';
+    this.baseService = new BaseService();
+    EventDispatcher.getInstance().subscribe('dataChanged', this.handleDataChanged.bind(this));
   }
 
   /**
@@ -51,13 +44,13 @@ export default class TrackListModel {
     this.searchName = searchName;
     this.searchTags = searchTags;
 
-    const allItems = await this.baseService.getAllItems();
-
-    // Build the full tree without filtering
-    const fullTree = await this.baseService.buildTree(allItems);
+    // Build the full tree
+    const fullTree = await this.baseService.buildTree();
+    console.log('fullTree', fullTree);
 
     // Recursively filter the tree
     const filteredTree = this.filterTree(fullTree);
+    console.log('filteredTree', filteredTree);
 
     return filteredTree;
   }
@@ -76,8 +69,8 @@ export default class TrackListModel {
           filteredItems.push(item);
         }
       } else if (item.type === 'playlist') {
-        const playlist = item as ResolvedPlaylist;
-        const filteredChildren = this.filterTree(playlist.items);
+        const playlist = item as Playlist;
+        const filteredChildren = this.filterTree(playlist.children || []);
 
         if (this.isSearchActive()) {
           // **Search is Active**
@@ -85,8 +78,8 @@ export default class TrackListModel {
           if (filteredChildren.length > 0) {
             filteredItems.push({
               ...playlist,
-              items: filteredChildren,
-            } as ResolvedPlaylist);
+              children: filteredChildren,
+            } as LibraryItem);
           }
           // Else, do not include the playlist
         } else {
@@ -94,13 +87,21 @@ export default class TrackListModel {
           // Include all playlists
           filteredItems.push({
             ...playlist,
-            items: filteredChildren,
-          } as ResolvedPlaylist);
+            children: filteredChildren,
+          } as LibraryItem);
         }
       }
     }
 
     return filteredItems;
+  }
+
+  /**
+   * Determines if a search query is active.
+   * @returns True if either searchName or searchTags is non-empty, false otherwise.
+   */
+  private isSearchActive(): boolean {
+    return this.searchName.trim() !== '' || this.searchTags.trim() !== '';
   }
 
   /**
@@ -110,7 +111,7 @@ export default class TrackListModel {
     const allItems = await this.baseService.getAllItems();
 
     // Convert ArrayBuffer data to base64 strings for serialization
-    const serializedItems = allItems.map(item => {
+    const serializedItems = allItems.map((item) => {
       if (item.type === 'track') {
         const track = item as Track;
         return {
@@ -121,30 +122,29 @@ export default class TrackListModel {
       return item;
     });
 
-    const blob = new Blob([JSON.stringify(serializedItems)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(serializedItems, null, 2)], { type: 'application/json' });
     saveAs(blob, 'library_export.json');
   }
 
-    /**
+  /**
    * Imports data from a JSON file into IndexedDB.
    */
-    async importData(file: File): Promise<void> {
-      const text = await file.text();
-      const importedItems = JSON.parse(text) as LibraryItem[];
-  
-      // Clear existing data
-      await this.baseService.deleteAllItems();
-  
-      // Reconstruct items and convert base64 strings back to ArrayBuffers
-      for (const item of importedItems) {
-        if (item.type === 'track') {
-          const track = item as Track;
-          track.data = base64ToArrayBuffer(track.data as unknown as string);
-        }
-        await this.baseService.addItem(item);
+  async importData(file: File): Promise<void> {
+    const text = await file.text();
+    const importedItems = JSON.parse(text) as LibraryItem[];
+
+    // Clear existing data
+    await this.baseService.deleteAllItems();
+
+    // Reconstruct items and convert base64 strings back to ArrayBuffers
+    for (const item of importedItems) {
+      if (item.type === 'track') {
+        const track = item as Track;
+        track.data = base64ToArrayBuffer(track.data as unknown as string);
       }
-      EventDispatcher.getInstance().emit('dataChanged');
+      await this.baseService.addItem(item);
     }
+  }
 
   /**
    * Determines if a LibraryItem matches the search criteria.
@@ -160,9 +160,9 @@ export default class TrackListModel {
 
     if (matches && this.searchTags && item.type === 'track') {
       const track = item as Track;
-      const searchTagsArray = this.searchTags.split(',').map(tag => tag.trim().toLowerCase());
-      matches = searchTagsArray.every(searchTag =>
-        track.tags.some(tag => tag.toLowerCase().includes(searchTag))
+      const searchTagsArray = this.searchTags.split(',').map((tag) => tag.trim().toLowerCase());
+      matches = searchTagsArray.every((searchTag) =>
+        track.tags.some((tag) => tag.toLowerCase().includes(searchTag))
       );
     }
 
@@ -174,13 +174,18 @@ export default class TrackListModel {
    * @param playlistName The name of the new playlist.
    */
   async createPlaylist(playlistName: string): Promise<void> {
-    const newPlaylist: Playlist = {
-      id: this.generateId(),
-      name: playlistName,
-      type: 'playlist',
-      items: [],
-    };
-    await this.baseService.addItem(newPlaylist);
+    try {
+      const playlist: Playlist = {
+        id: crypto.randomUUID(),
+        name: playlistName,
+        type: 'playlist',
+        children: [],
+      };
+      await this.baseService.addItem(playlist);
+    } catch (error) {
+      console.error('Error creating playlist:', error);
+      throw error;
+    }
   }
 
   /**
@@ -188,32 +193,46 @@ export default class TrackListModel {
    * @param file The audio file to add.
    */
   async addTrack(file: File): Promise<void> {
-    const arrayBuffer = await file.arrayBuffer();
-    const newTrack: Track = {
-      id: this.generateId(),
-      name: file.name,
-      type: 'track',
-      data: arrayBuffer,
-      tags: [],
-      description: '',
-      parentId: undefined,
-    };
-    await this.baseService.addItem(newTrack);
+    try {
+      const track: Track = {
+        id: crypto.randomUUID(),
+        name: file.name,
+        type: 'track',
+        data: await file.arrayBuffer(),
+        tags: [],
+        description: '',
+      };
+      await this.baseService.addItem(track);
+    } catch (error) {
+      console.error('Error adding track:', error);
+      throw error;
+    }
   }
 
   /**
-   * Generates a unique ID for new items.
-   * @returns A unique string ID.
+   * Deletes all items from the library.
    */
-  private generateId(): string {
-    return '_' + Math.random().toString(36).substr(2, 9);
+  async deleteAllItems(): Promise<void> {
+    await this.baseService.deleteAllItems();
+  }
+
+  /**
+   * Handles data change events emitted by the BaseService.
+   * @param event The event object containing action and payload.
+   */
+  private async handleDataChanged(event: { action: string; item?: LibraryItem; id?: string }) {
+    if (event.action === 'update') {
+      // Reload the tree or update the specific item if necessary
+      await this.getFilteredTree(this.searchName, this.searchTags);
+    }
+    // Handle other actions ('add', 'delete', 'move', etc.)
   }
 }
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const uint8Array = new Uint8Array(buffer);
   let binaryString = '';
-  const chunkSize = 0x8000; 
+  const chunkSize = 0x8000;
 
   for (let i = 0; i < uint8Array.length; i += chunkSize) {
     const chunk = uint8Array.subarray(i, i + chunkSize);

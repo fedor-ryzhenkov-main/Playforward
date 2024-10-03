@@ -1,12 +1,12 @@
 import React from 'react';
-import './ContextMenu.css';
+import './Styles.css';
 import {
   ContextMenuItem,
   ActionContextMenuItem,
   ModalContextMenuItem,
   SubmenuContextMenuItem,
   CustomContextMenuItem,
-} from './Controller';
+} from '../../contexts/ContextMenuContext';
 
 interface ContextMenuProps {
   x: number;

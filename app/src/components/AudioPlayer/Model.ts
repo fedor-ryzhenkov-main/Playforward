@@ -1,8 +1,6 @@
 import { Howl } from 'howler';
 import { AudioPlayerState, AudioPlayerController } from './Interfaces';
 import BaseService from '../../data/services/BaseService';
-import { BaseRepository } from '../../data/repositories/BaseRepository';
-import LibraryItem from '../../data/models/LibraryItem';
 import Track from '../../data/models/Track';
 
 /**
