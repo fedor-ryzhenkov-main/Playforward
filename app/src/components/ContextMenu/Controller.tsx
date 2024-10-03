@@ -4,12 +4,40 @@ import ContextMenu from './View';
 interface ContextMenuContextProps {
   registerMenuItems: (id: string, items: ContextMenuItem[]) => void;
   unregisterMenuItems: (id: string) => void;
+  openModal: (content: React.ReactNode) => void;
+  closeModal: () => void;
 }
 
-export interface ContextMenuItem {
+export interface BaseContextMenuItem {
   label: string;
+  type: string;
+}
+
+export interface ActionContextMenuItem extends BaseContextMenuItem {
+  type: 'action';
   onClick: () => void;
 }
+
+export interface ModalContextMenuItem extends BaseContextMenuItem {
+  type: 'modal';
+  modalContent: () => React.ReactNode;
+}
+
+export interface SubmenuContextMenuItem extends BaseContextMenuItem {
+  type: 'submenu';
+  items: ContextMenuItem[];
+}
+
+export interface CustomContextMenuItem extends BaseContextMenuItem {
+  type: 'custom';
+  render: () => React.ReactNode;
+}
+
+export type ContextMenuItem =
+  | ActionContextMenuItem
+  | ModalContextMenuItem
+  | SubmenuContextMenuItem
+  | CustomContextMenuItem;
 
 const ContextMenuContext = createContext<ContextMenuContextProps | undefined>(undefined);
 
@@ -35,6 +63,8 @@ export const ContextMenuProvider: React.FC<{ children: ReactNode }> = ({ childre
     items: [],
     isOpen: false,
   });
+  const [modalContent, setModalContent] = useState<React.ReactNode | null>(null);
+
   const menuItemsMap = React.useRef(new Map<string, ContextMenuItem[]>());
   const longPressTimer = React.useRef<number | null>(null);
   const longPressThreshold = 500; // milliseconds
@@ -45,6 +75,14 @@ export const ContextMenuProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   const unregisterMenuItems = useCallback((id: string) => {
     menuItemsMap.current.delete(id);
+  }, []);
+
+  const openModal = useCallback((content: React.ReactNode) => {
+    setModalContent(content);
+  }, []);
+
+  const closeModal = useCallback(() => {
+    setModalContent(null);
   }, []);
 
   const handleContextMenu = useCallback((event: MouseEvent) => {
@@ -118,7 +156,7 @@ export const ContextMenuProvider: React.FC<{ children: ReactNode }> = ({ childre
   }, [handleContextMenu, handleTouchStart, handleTouchEnd, handleTouchMove, handleClick]);
 
   return (
-    <ContextMenuContext.Provider value={{ registerMenuItems, unregisterMenuItems }}>
+    <ContextMenuContext.Provider value={{ registerMenuItems, unregisterMenuItems, openModal, closeModal }}>
       {children}
       {menuState.isOpen && (
         <ContextMenu
@@ -126,7 +164,15 @@ export const ContextMenuProvider: React.FC<{ children: ReactNode }> = ({ childre
           y={menuState.y}
           items={menuState.items}
           onClose={() => setMenuState(prev => ({ ...prev, isOpen: false }))}
+          onModalOpen={openModal}
         />
+      )}
+      {modalContent && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            {modalContent}
+          </div>
+        </div>
       )}
     </ContextMenuContext.Provider>
   );

@@ -10,6 +10,7 @@ import './PlaylistItem.css';
 import Playlist from '../../data/models/Playlist';
 import { BaseRepository } from '../../data/repositories/BaseRepository';
 import { v4 as uuidv4 } from 'uuid';
+import { ContextMenuItem } from '../ContextMenu/Controller';
 
 interface PlaylistItemProps {
   playlist: ResolvedPlaylist;
@@ -17,18 +18,13 @@ interface PlaylistItemProps {
 
 const PlaylistItem: React.FC<PlaylistItemProps> = React.memo(({ playlist }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const baseService = new BaseService(new BaseRepository<Playlist>('libraryObjectStore'));
-  const { registerMenuItems, unregisterMenuItems } = useContextMenu();
+  const { registerMenuItems, unregisterMenuItems, openModal, closeModal } = useContextMenu();
   const contextMenuId = useRef(`playlist-${playlist.id}-${uuidv4()}`);
 
   const toggleOpen = () => {
     setIsOpen(!isOpen);
   };
-
-  const handleMovePlaylist = useCallback(() => {
-    setIsMoveModalOpen(true);
-  }, []);
 
   const handleDeletePlaylist = useCallback(() => {
     const confirmDelete = window.confirm(`Are you sure you want to delete "${playlist.name}"?`);
@@ -38,12 +34,23 @@ const PlaylistItem: React.FC<PlaylistItemProps> = React.memo(({ playlist }) => {
   }, [baseService, playlist.id, playlist.name]);
 
   useEffect(() => {
-    const menuItems = [
+    const menuItems: ContextMenuItem[] = [
       {
+        type: 'modal',
         label: 'Move Playlist',
-        onClick: handleMovePlaylist,
+        modalContent: () => (
+          <MoveItemModal
+            item={playlist}
+            onClose={closeModal}
+            onMove={() => {
+              closeModal();
+              // Refresh logic if necessary
+            }}
+          />
+        ),
       },
       {
+        type: 'action',
         label: 'Delete Playlist',
         onClick: handleDeletePlaylist,
       },
@@ -54,7 +61,13 @@ const PlaylistItem: React.FC<PlaylistItemProps> = React.memo(({ playlist }) => {
     return () => {
       unregisterMenuItems(contextMenuId.current);
     };
-  }, [registerMenuItems, unregisterMenuItems, handleMovePlaylist, handleDeletePlaylist]);
+  }, [
+    registerMenuItems,
+    unregisterMenuItems,
+    contextMenuId,
+    closeModal,
+    playlist,
+  ]);
 
   const renderItems = (): React.ReactNode => {
     return playlist.items.map((item) => {
@@ -82,16 +95,6 @@ const PlaylistItem: React.FC<PlaylistItemProps> = React.memo(({ playlist }) => {
         <div className="playlist-content">
           {renderItems()}
         </div>
-      )}
-      {isMoveModalOpen && (
-        <MoveItemModal
-          item={playlist}
-          onClose={() => setIsMoveModalOpen(false)}
-          onMove={() => {
-            // Refresh logic if necessary
-            setIsMoveModalOpen(false);
-          }}
-        />
       )}
     </div>
   );

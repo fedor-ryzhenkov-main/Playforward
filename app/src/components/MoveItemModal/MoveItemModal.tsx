@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import './MoveItemModal.css';
-import Track from '../../data/models/Track';
-import Playlist from '../../data/models/Playlist';
 import LibraryItem from '../../data/models/LibraryItem';
 import BaseService, { ResolvedPlaylist } from '../../data/services/BaseService';
 import { BaseRepository } from '../../data/repositories/BaseRepository';
 import EventDispatcher from '../../data/events/EventDispatcher';
+import Playlist from '../../data/models/Playlist';
 
 interface MoveItemModalProps {
   item: LibraryItem;
@@ -13,9 +12,6 @@ interface MoveItemModalProps {
   onMove: () => void;
 }
 
-/**
- * Modal component for moving an item (track or playlist) to a different playlist.
- */
 const MoveItemModal: React.FC<MoveItemModalProps> = ({
   item,
   onClose,
@@ -100,25 +96,23 @@ const MoveItemModal: React.FC<MoveItemModalProps> = ({
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="move-item-modal">
-        <h2>Move Item to Playlist</h2>
-        <input
-          type="text"
-          placeholder="Search Playlists"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-        <div className="playlist-list">
-          <div className="playlist-item">
-            <div className="playlist-name" onClick={() => handleMove(undefined)}>
-              No Playlist
-            </div>
+    <div className="move-item-modal">
+      <h2>Move Item to Playlist</h2>
+      <input
+        type="text"
+        placeholder="Search Playlists"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+      <div className="playlist-list">
+        <div className="playlist-item">
+          <div className="playlist-name" onClick={() => handleMove(undefined)}>
+            No Playlist
           </div>
-          {renderPlaylistList()}
         </div>
-        <button onClick={onClose}>Cancel</button>
+        {renderPlaylistList()}
       </div>
+      <button onClick={onClose}>Cancel</button>
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useAudioPlayer } from '../../contexts/AudioPlayerContext';
-import { useContextMenu } from '../ContextMenu/Controller';
+import { ContextMenuItem, useContextMenu } from '../ContextMenu/Controller';
 import Track from '../../data/models/Track';
 import './TrackItem.css';
 import MoveItemModal from '../MoveItemModal/MoveItemModal';
@@ -15,7 +15,7 @@ interface TrackItemProps {
 const TrackItem: React.FC<TrackItemProps> = React.memo(({ track }) => {
   const { playTrack, stopTrack, isPlaying } = useAudioPlayer();
   const baseService = new BaseService(new BaseRepository<Track>('libraryObjectStore'));
-  const { registerMenuItems, unregisterMenuItems } = useContextMenu();
+  const { registerMenuItems, unregisterMenuItems, openModal, closeModal } = useContextMenu();
   const [isMoveModalOpen, setMoveModalOpen] = useState(false);
   const contextMenuId = useRef(`track-${track.id}-${uuidv4()}`);
 
@@ -84,12 +84,46 @@ const TrackItem: React.FC<TrackItemProps> = React.memo(({ track }) => {
   }, []);
 
   useEffect(() => {
-    const menuItems = [
-      { label: 'Delete Track', onClick: handleDeleteTrack },
-      { label: 'Rename Track', onClick: handleRenameTrack },
-      { label: 'Edit Tags', onClick: handleEditTags },
-      { label: 'Edit Description', onClick: handleEditDescription },
-      { label: 'Move', onClick: handleMoveTrack },
+    const menuItems: ContextMenuItem[] = [
+      {
+        type: 'action',
+        label: isPlaying(track.id) ? 'Stop Track' : 'Play Track',
+        onClick: handleClick,
+      },
+      {
+        type: 'modal',
+        label: 'Move Track',
+        modalContent: () => (
+          <MoveItemModal
+            item={track}
+            onClose={closeModal}
+            onMove={() => {
+              closeModal();
+              // Refresh logic if necessary
+            }}
+          />
+        ),
+      },
+      {
+        type: 'action',
+        label: 'Delete Track',
+        onClick: handleDeleteTrack,
+      },
+      { 
+        type: 'action',
+        label: 'Rename Track', 
+        onClick: handleRenameTrack,
+      },
+      {
+        type: 'action',
+        label: 'Edit Tags',
+        onClick: handleEditTags,
+      },
+      {
+        type: 'action',
+        label: 'Edit Description',
+        onClick: handleEditDescription,
+      },
     ];
 
     registerMenuItems(contextMenuId.current, menuItems);
@@ -100,11 +134,11 @@ const TrackItem: React.FC<TrackItemProps> = React.memo(({ track }) => {
   }, [
     registerMenuItems,
     unregisterMenuItems,
+    contextMenuId,
+    handleClick,
+    closeModal,
+    track,
     handleDeleteTrack,
-    handleRenameTrack,
-    handleEditTags,
-    handleEditDescription,
-    handleMoveTrack
   ]);
 
   return (

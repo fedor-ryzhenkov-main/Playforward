@@ -5,7 +5,7 @@ import TrackItem from '../TrackItem/TrackItem';
 import PlaylistItem from '../PlaylistItem/PlaylistItem';
 import './Styles.css';
 import { ResolvedPlaylist } from '../../data/services/BaseService';
-import { useContextMenu } from '../ContextMenu/Controller';
+import { ContextMenuItem, useContextMenu } from '../ContextMenu/Controller';
 import { v4 as uuidv4 } from 'uuid';
 
 interface TrackListViewProps {
@@ -66,14 +66,16 @@ const TrackListView: React.FC<TrackListViewProps> = ({
   };
 
   useEffect(() => {
-    const menuItems = [
+    const menuItems: ContextMenuItem[] = [
       {
-        label: 'Create Playlist',
-        onClick: handleCreatePlaylist,
-      },
-      {
+        type: 'action',
         label: 'Upload Track',
         onClick: handleUploadTrack,
+      },
+      {
+        type: 'action',
+        label: 'Create Playlist',
+        onClick: handleCreatePlaylist,
       },
     ];
 
