@@ -1,14 +1,14 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import ContextMenu from './View';
 
-export interface ContextMenuItem {
-  label: string;
-  onClick: () => void;
-}
-
 interface ContextMenuContextProps {
   registerMenuItems: (id: string, items: ContextMenuItem[]) => void;
   unregisterMenuItems: (id: string) => void;
+}
+
+export interface ContextMenuItem {
+  label: string;
+  onClick: () => void;
 }
 
 const ContextMenuContext = createContext<ContextMenuContextProps | undefined>(undefined);
@@ -36,6 +36,8 @@ export const ContextMenuProvider: React.FC<{ children: ReactNode }> = ({ childre
     isOpen: false,
   });
   const menuItemsMap = React.useRef(new Map<string, ContextMenuItem[]>());
+  const longPressTimer = React.useRef<number | null>(null);
+  const longPressThreshold = 500; // milliseconds
 
   const registerMenuItems = useCallback((id: string, items: ContextMenuItem[]) => {
     menuItemsMap.current.set(id, items);
@@ -47,7 +49,10 @@ export const ContextMenuProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   const handleContextMenu = useCallback((event: MouseEvent) => {
     event.preventDefault();
-    let target = event.target as HTMLElement;
+    showContextMenu(event.clientX, event.clientY, event.target as HTMLElement);
+  }, []);
+
+  const showContextMenu = useCallback((x: number, y: number, target: HTMLElement) => {
     let contextMenuId: string | null = null;
 
     // Traverse up the DOM tree to find an element with a data-contextmenu-id
@@ -59,13 +64,36 @@ export const ContextMenuProvider: React.FC<{ children: ReactNode }> = ({ childre
     if (contextMenuId) {
       const items = menuItemsMap.current.get(contextMenuId) || [];
       setMenuState({
-        x: event.clientX,
-        y: event.clientY,
+        x,
+        y,
         items,
         isOpen: true,
       });
     } else {
       setMenuState(prev => ({ ...prev, isOpen: false }));
+    }
+  }, []);
+
+  const handleTouchStart = useCallback((event: TouchEvent) => {
+    if (event.touches.length === 1) {
+      const touch = event.touches[0];
+      longPressTimer.current = window.setTimeout(() => {
+        showContextMenu(touch.clientX, touch.clientY, event.target as HTMLElement);
+      }, longPressThreshold);
+    }
+  }, [showContextMenu]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  const handleTouchMove = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
     }
   }, []);
 
@@ -75,12 +103,19 @@ export const ContextMenuProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   useEffect(() => {
     document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('touchstart', handleTouchStart);
+    document.addEventListener('touchend', handleTouchEnd);
+    document.addEventListener('touchmove', handleTouchMove);
     document.addEventListener('click', handleClick);
+
     return () => {
       document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchend', handleTouchEnd);
+      document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('click', handleClick);
     };
-  }, [handleContextMenu, handleClick]);
+  }, [handleContextMenu, handleTouchStart, handleTouchEnd, handleTouchMove, handleClick]);
 
   return (
     <ContextMenuContext.Provider value={{ registerMenuItems, unregisterMenuItems }}>
