@@ -55,6 +55,10 @@ export default class BaseService {
     }
   }
 
+  async deleteAllItems(): Promise<void> {
+    await this.repository.clear();
+  }
+
   /**
    * Updates an item and synchronizes parent-child relationships.
    * @param item The item to update.

@@ -16,6 +16,8 @@ interface TrackListViewProps {
   onSearchTagsChange: (tags: string) => void;
   onCreatePlaylist: (playlistName: string) => void;
   onUploadTrack: (file: File) => void;
+  onExportData: () => void;
+  onImportData: () => void;
 }
 
 /**
@@ -31,6 +33,8 @@ const TrackListView: React.FC<TrackListViewProps> = ({
   onSearchTagsChange,
   onCreatePlaylist,
   onUploadTrack,
+  onExportData,
+  onImportData,
 }) => {
   /**
    * Handles the creation of a new playlist via prompt.
@@ -128,9 +132,10 @@ const TrackListView: React.FC<TrackListViewProps> = ({
           value={searchTags}
           onChange={(e) => onSearchTagsChange(e.target.value)}
         />
-      </div>
-      <div className="actions-container">
-        {/* Removed Create Playlist and Upload Track buttons */}
+        <div className="actions-container">
+          <button onClick={onExportData}>Export Library</button>
+          <button onClick={onImportData}>Import Library</button>
+        </div>
       </div>
       {error && <div className="error">{error}</div>}
       <div className="track-list">{renderItems(trackTree)}</div>

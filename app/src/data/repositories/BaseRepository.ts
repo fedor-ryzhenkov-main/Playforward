@@ -82,4 +82,15 @@ export class BaseRepository<T extends { id: string }> implements IRepository<T> 
       };
     });
   }
+
+  async clear(): Promise<void> {
+    const db = await getDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([this.storeName], 'readwrite');
+      const store = transaction.objectStore(this.storeName);
+      const request = store.clear();
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve();
+    });
+  }
 }

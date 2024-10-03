@@ -1,3 +1,4 @@
+import { saveAs } from 'file-saver';
 import Track from '../../data/models/Track';
 import Playlist from '../../data/models/Playlist';
 import LibraryItem from '../../data/models/LibraryItem';
@@ -103,6 +104,49 @@ export default class TrackListModel {
   }
 
   /**
+   * Exports all data from IndexedDB into a single JSON file.
+   */
+  async exportData(): Promise<void> {
+    const allItems = await this.baseService.getAllItems();
+
+    // Convert ArrayBuffer data to base64 strings for serialization
+    const serializedItems = allItems.map(item => {
+      if (item.type === 'track') {
+        const track = item as Track;
+        return {
+          ...track,
+          data: arrayBufferToBase64(track.data),
+        };
+      }
+      return item;
+    });
+
+    const blob = new Blob([JSON.stringify(serializedItems)], { type: 'application/json' });
+    saveAs(blob, 'library_export.json');
+  }
+
+    /**
+   * Imports data from a JSON file into IndexedDB.
+   */
+    async importData(file: File): Promise<void> {
+      const text = await file.text();
+      const importedItems = JSON.parse(text) as LibraryItem[];
+  
+      // Clear existing data
+      await this.baseService.deleteAllItems();
+  
+      // Reconstruct items and convert base64 strings back to ArrayBuffers
+      for (const item of importedItems) {
+        if (item.type === 'track') {
+          const track = item as Track;
+          track.data = base64ToArrayBuffer(track.data as unknown as string);
+        }
+        await this.baseService.addItem(item);
+      }
+      EventDispatcher.getInstance().emit('dataChanged');
+    }
+
+  /**
    * Determines if a LibraryItem matches the search criteria.
    * @param item The LibraryItem to check.
    * @returns True if the item matches, false otherwise.
@@ -164,4 +208,27 @@ export default class TrackListModel {
   private generateId(): string {
     return '_' + Math.random().toString(36).substr(2, 9);
   }
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const uint8Array = new Uint8Array(buffer);
+  let binaryString = '';
+  const chunkSize = 0x8000; 
+
+  for (let i = 0; i < uint8Array.length; i += chunkSize) {
+    const chunk = uint8Array.subarray(i, i + chunkSize);
+    binaryString += String.fromCharCode.apply(null, chunk as any);
+  }
+
+  return btoa(binaryString);
+}
+
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
 }

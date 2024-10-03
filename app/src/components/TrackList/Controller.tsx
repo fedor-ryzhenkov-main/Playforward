@@ -4,6 +4,7 @@ import TrackListView from './View';
 import LibraryItem from '../../data/models/LibraryItem';
 import Playlist from '../../data/models/Playlist';
 import Track from '../../data/models/Track';
+import EventDispatcher from '../../data/events/EventDispatcher';
 
 /**
  * Controller component that manages the TrackListModel and communicates with the TrackListView.
@@ -16,6 +17,7 @@ const TrackListController: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchName, setSearchName] = useState<string>('');
   const [searchTags, setSearchTags] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   /**
    * Loads the hierarchical tree structure from the model.
@@ -96,18 +98,57 @@ const TrackListController: React.FC = () => {
     }
   };
 
+  const handleExportData = async () => {
+    try {
+      await model.exportData();
+    } catch (err) {
+      console.error('Error exporting data:', err);
+      alert('Failed to export data.');
+    }
+  };
+
+  const handleImportData = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      try {
+        await model.importData(file);
+        await loadTrackTree();
+      } catch (err) {
+        console.error('Error importing data:', err);
+        alert('Failed to import data.');
+      }
+    }
+  };
+
   return (
-    <TrackListView
-      trackTree={trackTree}
-      loading={loading}
-      error={error}
-      searchName={searchName}
-      searchTags={searchTags}
-      onSearchNameChange={handleSearchNameChange}
-      onSearchTagsChange={handleSearchTagsChange}
-      onCreatePlaylist={handleCreatePlaylist}
-      onUploadTrack={handleUploadTrack}
-    />
+    <div>
+      <TrackListView
+        trackTree={trackTree}
+        loading={loading}
+        error={error}
+        searchName={searchName}
+        searchTags={searchTags}
+        onSearchNameChange={handleSearchNameChange}
+        onSearchTagsChange={handleSearchTagsChange}
+        onCreatePlaylist={handleCreatePlaylist}
+        onUploadTrack={handleUploadTrack}
+        onExportData={handleExportData}
+        onImportData={handleImportData}
+      />
+      <input
+        type="file"
+        accept=".json"
+        ref={fileInputRef}
+        style={{ display: 'none' }}
+        onChange={handleFileChange}
+      />
+    </div>
   );
 };
 
