@@ -24,42 +24,46 @@ const AudioPlayerView: React.FC<AudioPlayerViewProps> = ({
 }) => {
   const { isPlaying, currentTime, duration, volume, isLooping, isFadeEffectActive } = playerState;
 
+  const isLoaded = duration > 0; // Simple check to see if the audio is loaded
+
   return (
     <div className="audio-player">
-      <AudioSlider currentTime={currentTime} duration={duration} onSeek={onSeek} />
-      <div className="controls">
-        <div className="left-controls">
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.0005"
-            value={volume}
-            onChange={(e) => onVolumeChange(Number(e.target.value))}
-            className="volume-slider"
-          />
+      {!isLoaded && <div className="loading-indicator">Loading...</div>}
+      {isLoaded && (
+      <><AudioSlider currentTime={currentTime} duration={duration} onSeek={onSeek} /><div className="controls">
+          <div className="left-controls">
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.0005"
+              value={volume}
+              onChange={(e) => onVolumeChange(Number(e.target.value))}
+              className="volume-slider" />
+          </div>
+          <button className="play-pause" onClick={onPlayPause}>
+            {isPlaying ? '❚❚' : '▶'}
+          </button>
+          <div className="right-controls">
+            <button
+              className={`loop ${isLooping ? 'active' : ''}`}
+              onClick={onToggleLoop}
+            >
+              🔁
+            </button>
+            <button
+              className={`fade ${isFadeEffectActive ? 'active' : ''}`}
+              onClick={onToggleFadeEffect}
+            >
+              🎚
+            </button>
+            <button className="close" onClick={onClose}>
+              ✖
+            </button>
+          </div>
         </div>
-        <button className="play-pause" onClick={onPlayPause}>
-          {isPlaying ? '❚❚' : '▶'}
-        </button>
-        <div className="right-controls">
-          <button
-            className={`loop ${isLooping ? 'active' : ''}`}
-            onClick={onToggleLoop}
-          >
-            🔁
-          </button>
-          <button
-            className={`fade ${isFadeEffectActive ? 'active' : ''}`}
-            onClick={onToggleFadeEffect}
-          >
-            🎚
-          </button>
-          <button className="close" onClick={onClose}>
-            ✖
-          </button>
-        </div>
-      </div>
+      </>
+      )}
     </div>
   );
 };

@@ -13,6 +13,7 @@ class AudioPlayerModel implements AudioPlayerController, AudioPlayerState {
   private player: Howl | null = null;
   private updateFrameId: number | null = null;
   private isSeeking = false;
+  private isLoaded = false; // New flag to track loading status
 
   public isPlaying = false;
   public currentTime = 0;
@@ -39,20 +40,16 @@ class AudioPlayerModel implements AudioPlayerController, AudioPlayerState {
   async initialize(): Promise<void> {
     const track = await this.baseService.getItem(this.trackKey) as Track;
     if (track) {
-      const audioBlob = new Blob([track.data], { type: track.type });
-      if (audioBlob) {
-        this.player = new Howl({
-          src: [URL.createObjectURL(audioBlob)],
-          format: ['mp3', 'wav'],
-          loop: this.isLooping,
-          onend: this.handleTrackEnd.bind(this),
-          onload: this.handleTrackLoad.bind(this),
-        });
-      } else {
-        console.error('Failed to load audio blob from repository.');
-      }
+      const audioBlob = new Blob([track.data], { type: 'audio/mpeg' });
+      this.player = new Howl({
+        src: [URL.createObjectURL(audioBlob)],
+        format: ['mp3', 'wav'],
+        loop: this.isLooping,
+        onend: this.handleTrackEnd.bind(this),
+        onload: this.handleTrackLoad.bind(this),
+      });
     } else {
-      console.error('Failed to load audio blob from repository.');
+      console.error('Failed to load audio track from repository.');
     }
   }
 
@@ -75,6 +72,7 @@ class AudioPlayerModel implements AudioPlayerController, AudioPlayerState {
     if (this.player) {
       this.duration = this.player.duration();
       this.updateState({ duration: this.duration });
+      this.isLoaded = true; // Set the flag when loaded
     }
   }
 
@@ -83,7 +81,8 @@ class AudioPlayerModel implements AudioPlayerController, AudioPlayerState {
    */
   private updatePlaybackState(): void {
     this.cancelUpdatePlaybackState();
-    if (this.player && this.player.playing() && !this.isSeeking) {
+
+    if (this.player && !this.isSeeking) {
       this.currentTime = this.player.seek() as number;
       this.updateState({ currentTime: this.currentTime });
       this.updateFrameId = requestAnimationFrame(this.updatePlaybackState.bind(this));
@@ -101,25 +100,35 @@ class AudioPlayerModel implements AudioPlayerController, AudioPlayerState {
    * Toggles between play and pause states, with a brief fade-out on pause to prevent popping sounds.
    */
   togglePlayPause(): void {
+    if (!this.isLoaded) {
+      console.warn('Audio is still loading, please wait.');
+      return;
+    }
+
     if (this.player) {
       if (this.player.playing()) {
-        // Apply a brief fade-out on pause
-        const fadeOutDuration = this.isFadeEffectActive ? 1000 : 200; // Longer fade if fadeEffect is enabled
+        // Pause logic with fade-out
+        const fadeOutDuration = this.isFadeEffectActive ? 1000 : 200;
         this.player.fade(this.volume, 0, fadeOutDuration);
         setTimeout(() => {
           this.player?.pause();
-          this.player?.volume(this.volume); // Reset volume back to original
+          this.player?.volume(this.volume);
           this.updateState({ isPlaying: false });
         }, fadeOutDuration);
         this.cancelUpdatePlaybackState();
       } else {
-        // Apply fade-in on play
-        const fadeInDuration = this.isFadeEffectActive ? 1000 : 200; // Longer fade if fadeEffect is enabled
+        // Play logic with fade-in
+        const fadeInDuration = this.isFadeEffectActive ? 1000 : 200;
         this.player.volume(0);
+
+        // Start updating playback state after playback starts
+        this.player.once('play', () => {
+          this.updateState({ isPlaying: true });
+          this.updatePlaybackState();
+        });
+
         this.player.play();
         this.player.fade(0, this.volume, fadeInDuration);
-        this.updateState({ isPlaying: true });
-        this.updatePlaybackState();
       }
     } else {
       console.warn('Player is not initialized.');
