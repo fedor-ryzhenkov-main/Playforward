@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FaChevronRight, FaChevronDown } from 'react-icons/fa';
 import { ContextMenuItem, useContextMenu } from 'contexts/ContextMenuContext';
-import MoveItemModal from 'components/modals/MoveItemModal/MoveItemModal';
+import MoveItemModal from 'components/modals/move-item-modal/MoveItemModal';
 import Playlist from 'data/models/Playlist';
 import './PlaylistItem.css';
 import BaseService from 'data/services/BaseService';

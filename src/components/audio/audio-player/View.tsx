@@ -1,5 +1,5 @@
 import React from 'react';
-import AudioSlider from 'components/audio/AudioSlider/AudioSlider';
+import AudioSlider from 'components/audio/audio-slider/AudioSlider';
 import { AudioPlayerState } from './Interfaces';
 import './Styles.css'; 
 

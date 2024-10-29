@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import 'components/modals/MoveItemModal/MoveItemModal.css';
+import 'components/modals/move-item-modal/MoveItemModal.css';
 import LibraryItem from 'data/models/LibraryItem';
 import BaseService from 'data/services/BaseService';
 import Playlist from 'data/models/Playlist';

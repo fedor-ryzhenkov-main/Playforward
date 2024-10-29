@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import TreeNode from 'data/models/TreeNode';
 import Track from 'data/models/Track';
-import TrackItem from 'components/items/TrackItem/TrackItem';
-import PlaylistItem from 'components/items/PlaylistItem/PlaylistItem';
+import TrackItem from 'components/items/track-item/TrackItem';
+import PlaylistItem from 'components/items/playlist-item/PlaylistItem';
 import './Styles.css';
 import { ContextMenuItem, useContextMenu } from 'contexts/ContextMenuContext';
 import { v4 as uuidv4 } from 'uuid';

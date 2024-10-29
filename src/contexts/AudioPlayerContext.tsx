@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import AudioPlayerController from 'components/audio/AudioPlayer/Controller';
+import AudioPlayerController from 'components/audio/audio-player/Controller';
 
 interface AudioPlayerContextType {
   playTrack: (trackId: string) => void;

@@ -1,7 +1,7 @@
 // app/src/hooks/usePrompt.tsx
 import React from 'react';
 import { useModal } from '../contexts/ModalContext';
-import PromptModal from '../components/modals/PromptModal/PromptModal';
+import PromptModal from '../components/modals/prompt-modal/PromptModal';
 
 type PromptOptions = {
   title: string;

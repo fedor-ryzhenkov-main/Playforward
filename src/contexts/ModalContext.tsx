@@ -6,7 +6,7 @@ import React, {
     useCallback,
     ReactNode,
   } from 'react';
-  import Modal from '../components/modals/Modal/Modal';
+  import Modal from '../components/modals/modal/Modal';
   
   interface ModalContextProps {
     openModal: (content: React.ReactNode) => void;
