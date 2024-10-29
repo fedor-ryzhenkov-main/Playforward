@@ -3,8 +3,6 @@ import ClosureEntry from '../models/ClosureEntry';
 import { ItemRepository } from '../repositories/ItemRepository';
 import { ClosureTableRepository } from '../repositories/ClosureTableRepository';
 import EventDispatcher from '../events/EventDispatcher';
-import Playlist from '../models/Playlist';
-import Track from '../models/Track';
 import TreeNode from '../models/TreeNode';
 
 /**

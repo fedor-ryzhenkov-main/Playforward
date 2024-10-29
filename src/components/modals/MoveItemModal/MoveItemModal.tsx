@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import './MoveItemModal.css';
-import LibraryItem from '../../data/models/LibraryItem';
-import BaseService from '../../data/services/BaseService';
-import Playlist from '../../data/models/Playlist';
-import TreeNode from '../../data/models/TreeNode';
+import 'components/modals/MoveItemModal/MoveItemModal.css';
+import LibraryItem from 'data/models/LibraryItem';
+import BaseService from 'data/services/BaseService';
+import Playlist from 'data/models/Playlist';
+import TreeNode from 'data/models/TreeNode';
 
 interface MoveItemModalProps {
   item: LibraryItem;

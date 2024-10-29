@@ -2,10 +2,10 @@ import React from 'react';
 import { Container, Typography } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import './App.css';
-import { AudioPlayerProvider } from './contexts/AudioPlayerContext';
-import { ContextMenuProvider } from './contexts/ContextMenuContext';
-import TrackListController from './components/TrackList/Controller';
-import { ModalProvider } from './contexts/ModalContext';
+import { AudioPlayerProvider } from 'contexts/AudioPlayerContext';
+import { ContextMenuProvider } from 'contexts/ContextMenuContext';
+import TrackListController from 'components/lists/TrackList/Controller';
+import { ModalProvider } from 'contexts/ModalContext';
 
 const App: React.FC = () => {
   return (

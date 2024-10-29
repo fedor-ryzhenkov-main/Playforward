@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
-import ContextMenu from '../components/ContextMenu/View';
+import ContextMenu from 'components/menus/ContextMenu/View';
 import './ContextMenuContext.css';
 
 interface ContextMenuContextProps {

@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FaChevronRight, FaChevronDown } from 'react-icons/fa';
-import { ContextMenuItem, useContextMenu } from '../../contexts/ContextMenuContext';
-import MoveItemModal from '../MoveItemModal/MoveItemModal';
-import TrackItem from '../TrackItem/TrackItem';
-import Track from '../../data/models/Track';
-import Playlist from '../../data/models/Playlist';
+import { ContextMenuItem, useContextMenu } from 'contexts/ContextMenuContext';
+import MoveItemModal from 'components/modals/MoveItemModal/MoveItemModal';
+import Playlist from 'data/models/Playlist';
 import './PlaylistItem.css';
-import BaseService from '../../data/services/BaseService';
+import BaseService from 'data/services/BaseService';
 
 /**
  * Props for the PlaylistItem component.

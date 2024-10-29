@@ -1,7 +1,7 @@
 import React from 'react';
-import AudioSlider from '../AudioSlider';
+import AudioSlider from 'components/audio/AudioSlider/AudioSlider';
 import { AudioPlayerState } from './Interfaces';
-import './Styles.css'; // Import the CSS file for styling
+import './Styles.css'; 
 
 interface AudioPlayerViewProps {
   playerState: AudioPlayerState;

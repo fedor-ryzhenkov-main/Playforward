@@ -6,7 +6,7 @@ import {
   ModalContextMenuItem,
   SubmenuContextMenuItem,
   CustomContextMenuItem,
-} from '../../contexts/ContextMenuContext';
+} from 'contexts/ContextMenuContext';
 
 interface ContextMenuProps {
   x: number;

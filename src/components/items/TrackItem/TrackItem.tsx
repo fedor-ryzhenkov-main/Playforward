@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { useContextMenu, ContextMenuItem } from '../../contexts/ContextMenuContext';
-import { useModal } from '../../contexts/ModalContext';
-import PromptModal from '../PromptModal/PromptModal';
-import MoveItemModal from '../MoveItemModal/MoveItemModal';
-import Track from '../../data/models/Track';
-import BaseService from '../../data/services/BaseService';
+import { useContextMenu, ContextMenuItem } from 'contexts/ContextMenuContext';
+import { useModal } from 'contexts/ModalContext';
+import PromptModal from 'components/modals/PromptModal/PromptModal';
+import MoveItemModal from 'components/modals/MoveItemModal/MoveItemModal';
+import Track from 'data/models/Track';
+import BaseService from 'data/services/BaseService';
 import './TrackItem.css';
-import { useAudioPlayer } from '../../contexts/AudioPlayerContext';
+import { useAudioPlayer } from 'contexts/AudioPlayerContext';
 
 interface TrackItemProps {
   track: Track;

@@ -1,11 +1,11 @@
 import { saveAs } from 'file-saver';
-import Track from '../../data/models/Track';
-import Playlist from '../../data/models/Playlist';
-import LibraryItem from '../../data/models/LibraryItem';
-import BaseService from '../../data/services/BaseService';
-import EventDispatcher from '../../data/events/EventDispatcher';
-import ClosureEntry from '../../data/models/ClosureEntry';
-import TreeNode from '../../data/models/TreeNode';
+import Track from 'data/models/Track';
+import Playlist from 'data/models/Playlist';
+import LibraryItem from 'data/models/LibraryItem';
+import BaseService from 'data/services/BaseService';
+import EventDispatcher from 'data/events/EventDispatcher';
+import ClosureEntry from 'data/models/ClosureEntry';
+import TreeNode from 'data/models/TreeNode';
 
 /**
  * Manages the track and playlist tree structure.

@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import AudioPlayerView from './View';
 import AudioPlayerModel from './Model';
 import { AudioPlayerState } from './Interfaces';
-import BaseService from '../../data/services/BaseService';
+import BaseService from 'data/services/BaseService';
 
 interface AudioPlayerControllerProps {
   trackId: string;

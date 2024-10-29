@@ -1,7 +1,7 @@
 import { Howl } from 'howler';
 import { AudioPlayerState, AudioPlayerController } from './Interfaces';
-import BaseService from '../../data/services/BaseService';
-import Track from '../../data/models/Track';
+import BaseService from 'data/services/BaseService';
+import Track from 'data/models/Track';
 
 /**
  * Manages audio playback using Howler.js, including play/pause with fade-out to prevent popping,

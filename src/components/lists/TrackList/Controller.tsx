@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import TrackListModel from './Model';
 import TrackListView from './View';
-import TreeNode from '../../data/models/TreeNode';
+import TreeNode from 'data/models/TreeNode';
 
 /**
  * Controller component that manages the TrackListModel and communicates with the TrackListView.

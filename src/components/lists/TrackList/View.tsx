@@ -1,12 +1,12 @@
 import React, { useEffect, useRef } from 'react';
-import TreeNode from '../../data/models/TreeNode';
-import Track from '../../data/models/Track';
-import TrackItem from '../TrackItem/TrackItem';
-import PlaylistItem from '../PlaylistItem/PlaylistItem';
+import TreeNode from 'data/models/TreeNode';
+import Track from 'data/models/Track';
+import TrackItem from 'components/items/TrackItem/TrackItem';
+import PlaylistItem from 'components/items/PlaylistItem/PlaylistItem';
 import './Styles.css';
-import { ContextMenuItem, useContextMenu } from '../../contexts/ContextMenuContext';
+import { ContextMenuItem, useContextMenu } from 'contexts/ContextMenuContext';
 import { v4 as uuidv4 } from 'uuid';
-import Playlist from '../../data/models/Playlist';
+import Playlist from 'data/models/Playlist';
 
 interface TrackListViewProps {
   trackTree: TreeNode[];
