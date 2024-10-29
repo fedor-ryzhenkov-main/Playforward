@@ -1,60 +1,51 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import TrackListModel from './Model';
 import TrackListView from './View';
-import TreeNode from 'data/models/TreeNode';
+import Track from 'data/models/Track';
 
 /**
  * Controller component that manages the TrackListModel and communicates with the TrackListView.
  */
 const TrackListController: React.FC = () => {
-  const modelRef = useRef<TrackListModel | null>(null);
-  if (modelRef.current === null) {
-    modelRef.current = new TrackListModel();
-  }
-  const model = modelRef.current;
-  const [trackTree, setTrackTree] = useState<TreeNode[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const modelRef = useRef<TrackListModel>(new TrackListModel());
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [allTags, setAllTags] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchName, setSearchName] = useState<string>('');
-  const [searchTags, setSearchTags] = useState<string>('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [searchName, setSearchName] = useState('');
+  const [searchTags, setSearchTags] = useState('');
 
-  /**
-   * Loads the hierarchical tree structure from the model.
-   */
-  const loadTrackTree = useCallback(async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const items = await model.getFilteredTree(searchName, searchTags);
-      console.log('items', items);
-      setTrackTree(items);
+      const [loadedTracks, tags] = await Promise.all([
+        modelRef.current.getTracks(searchName, searchTags),
+        modelRef.current.getAllTags()
+      ]);
+      setTracks(loadedTracks);
+      setAllTags(tags);
     } catch (err) {
-      console.error('Error loading track tree:', err);
-      setError('Failed to load track list.');
+      console.error('Error loading tracks:', err);
+      setError('Failed to load tracks');
     } finally {
       setLoading(false);
     }
-  }, [model, searchName, searchTags]);
-
-  /**
-   * Handles updates when data changes in the model.
-   */
-  const handleDataChanged = useCallback(() => {
-    loadTrackTree();
-  }, [loadTrackTree]);
+  }, [searchName, searchTags]);
 
   useEffect(() => {
-    loadTrackTree();
+    // Subscribe to model changes
+    const unsubscribe = modelRef.current.subscribe(() => {
+      loadData();
+    });
 
-    // Subscribe to data changes
-    model.subscribe(handleDataChanged);
+    // Initial load
+    loadData();
 
-    // Cleanup subscription on unmount
     return () => {
-      model.unsubscribe(handleDataChanged);
+      unsubscribe();
     };
-  }, [loadTrackTree, handleDataChanged]);
+  }, [loadData]);
 
   /**
    * Handles changes in the search name input.
@@ -62,7 +53,6 @@ const TrackListController: React.FC = () => {
    */
   const handleSearchNameChange = (name: string) => {
     setSearchName(name);
-    loadTrackTree();
   };
 
   /**
@@ -71,21 +61,6 @@ const TrackListController: React.FC = () => {
    */
   const handleSearchTagsChange = (tags: string) => {
     setSearchTags(tags);
-    loadTrackTree();
-  };
-
-  /**
-   * Handles the creation of a new playlist.
-   * @param playlistName The name of the new playlist.
-   */
-  const handleCreatePlaylist = async (playlistName: string) => {
-    try {
-      await model.createPlaylist(playlistName);
-      // No need to manually load the tree as the event will trigger it
-    } catch (err) {
-      console.error('Error creating playlist:', err);
-      alert('Failed to create playlist.');
-    }
   };
 
   /**
@@ -94,75 +69,43 @@ const TrackListController: React.FC = () => {
    */
   const handleUploadTrack = async (file: File) => {
     try {
-      await model.addTrack(file);
-      // No need to manually load the tree as the event will trigger it
+      await modelRef.current.addTrack(file);
     } catch (err) {
       console.error('Error uploading track:', err);
-      alert('Failed to upload track.');
+      setError('Failed to upload track');
     }
   };
 
   /**
-   * Handles exporting the library data.
+   * Handles the import of tracks from a JSON file.
+   * @param file The JSON file containing track data.
    */
-  const handleExportData = async () => {
+  const handleImportTracks = async (file: File) => {
+    setLoading(true);
+    setError(null);
     try {
-      await model.exportData();
+      await modelRef.current.importTracks(file);
+      await loadData(); // Reload data after import
     } catch (err) {
-      console.error('Error exporting data:', err);
-      alert('Failed to export data.');
-    }
-  };
-
-  /**
-   * Handles importing the library data.
-   */
-  const handleImportData = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  /**
-   * Handles file selection for importing data.
-   * @param event The file input change event.
-   */
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      try {
-        await model.importData(file);
-        // No need to manually load the tree as the event will trigger it
-      } catch (err) {
-        console.error('Error importing data:', err);
-        alert('Failed to import data.');
-      } 
+      console.error('Error importing tracks:', err);
+      setError('Failed to import tracks: ' + (err as Error).message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div>
-      <TrackListView
-        trackTree={trackTree}
-        loading={loading}
-        error={error}
-        searchName={searchName}
-        searchTags={searchTags}
-        onSearchNameChange={handleSearchNameChange}
-        onSearchTagsChange={handleSearchTagsChange}
-        onCreatePlaylist={handleCreatePlaylist}
-        onUploadTrack={handleUploadTrack}
-        onExportData={handleExportData}
-        onImportData={handleImportData}
-      />
-      <input
-        type="file"
-        accept=".json"
-        ref={fileInputRef}
-        style={{ display: 'none' }}
-        onChange={handleFileChange}
-      />
-    </div>
+    <TrackListView
+      tracks={tracks}
+      loading={loading}
+      error={error}
+      searchName={searchName}
+      searchTags={searchTags}
+      allTags={allTags}
+      onSearchNameChange={handleSearchNameChange}
+      onSearchTagsChange={handleSearchTagsChange}
+      onUploadTrack={handleUploadTrack}
+    />
   );
 };
 

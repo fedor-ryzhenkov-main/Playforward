@@ -36,7 +36,7 @@ class AudioPlayerModel implements AudioPlayerController, AudioPlayerState {
    * Initializes the audio player by loading the track from IndexedDB.
    */
   async initialize(): Promise<void> {
-    const track = await this.baseService.getItem(this.trackKey) as Track;
+    const track = await this.baseService.getTrack(this.trackKey);
     if (track) {
       const audioBlob = new Blob([track.data], { type: 'audio/mpeg' });
       this.player = new Howl({

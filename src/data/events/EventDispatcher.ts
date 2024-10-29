@@ -1,4 +1,4 @@
-import { EventEmitter } from 'events';
+type EventCallback<T = any> = (data: T) => void;
 
 /**
  * EventDispatcher class for managing database-related events.
@@ -6,10 +6,10 @@ import { EventEmitter } from 'events';
  */
 class EventDispatcher {
   private static instance: EventDispatcher;
-  private emitter: EventEmitter;
+  private listeners: Map<string, Set<EventCallback>>;
 
   private constructor() {
-    this.emitter = new EventEmitter();
+    this.listeners = new Map();
   }
 
   /**
@@ -24,30 +24,37 @@ class EventDispatcher {
   }
 
   /**
-   * Emit an event to notify subscribers of a database change.
-   * @param {string} eventName - The name of the event.
-   * @param {any} data - Optional data to be passed with the event.
-   */
-  public emit(eventName: string, data?: any): void {
-    this.emitter.emit(eventName, data);
-  }
-
-  /**
    * Subscribe to a database change event.
-   * @param {string} eventName - The name of the event to subscribe to.
+   * @param {string} event - The name of the event to subscribe to.
    * @param {Function} callback - The function to be called when the event is emitted.
    */
-  public subscribe(eventName: string, callback: (data?: any) => void): void {
-    this.emitter.on(eventName, callback);
+  public subscribe<T>(event: string, callback: EventCallback<T>): void {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, new Set());
+    }
+    this.listeners.get(event)!.add(callback);
   }
 
   /**
    * Unsubscribe from a database change event.
-   * @param {string} eventName - The name of the event to unsubscribe from.
+   * @param {string} event - The name of the event to unsubscribe from.
    * @param {Function} callback - The function to be removed from the event listeners.
    */
-  public unsubscribe(eventName: string, callback: (data?: any) => void): void {
-    this.emitter.off(eventName, callback);
+  public unsubscribe<T>(event: string, callback: EventCallback<T>): void {
+    if (this.listeners.has(event)) {
+      this.listeners.get(event)!.delete(callback);
+    }
+  }
+
+  /**
+   * Emit an event to notify subscribers of a database change.
+   * @param {string} event - The name of the event to emit.
+   * @param {any} data - Optional data to be passed with the event.
+   */
+  public emit<T>(event: string, data: T): void {
+    if (this.listeners.has(event)) {
+      this.listeners.get(event)!.forEach(callback => callback(data));
+    }
   }
 }
 

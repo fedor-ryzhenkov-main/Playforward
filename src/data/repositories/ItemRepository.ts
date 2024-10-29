@@ -1,44 +1,85 @@
-import { getDB } from '../database/Database';
-import { IRepository } from './Interfaces';
-import LibraryItem from '../models/LibraryItem';
+import Track from 'data/models/Track';
+import { openDB, DBSchema, IDBPDatabase } from 'idb';
+
+interface TrackDB extends DBSchema {
+  tracks: {
+    key: string;
+    value: Track;
+    indexes: { 'by-name': string };
+  };
+}
 
 /**
- * Repository for managing LibraryItem entities.
+ * Repository for managing tracks in IndexedDB.
  */
-export class ItemRepository implements IRepository<LibraryItem> {
-  private storeName: 'libraryItems' = 'libraryItems';
+export class ItemRepository {
+  private dbName = 'library';
+  private version = 1;
+  private db: IDBPDatabase<TrackDB> | null = null;
 
-  async add(item: LibraryItem): Promise<void> {
-    const db = await getDB();
-    await db.add(this.storeName, item);
+  /**
+   * Opens the database connection.
+   */
+  private async openDB(): Promise<IDBPDatabase<TrackDB>> {
+    if (!this.db) {
+      this.db = await openDB<TrackDB>(this.dbName, this.version, {
+        upgrade(db) {
+          const store = db.createObjectStore('tracks', { keyPath: 'id' });
+          store.createIndex('by-name', 'name');
+        },
+      });
+    }
+    return this.db;
   }
 
   /**
-   * Updates an existing item in the repository.
-   * @param item The item with updated properties.
+   * Adds a new track to the database.
    */
-  async update(item: LibraryItem): Promise<void> {
-    const db = await getDB();
-    await db.put(this.storeName, item);
+  async add(track: Track): Promise<void> {
+    const db = await this.openDB();
+    await db.add('tracks', track);
   }
 
+  /**
+   * Updates an existing track in the database.
+   */
+  async update(track: Track): Promise<void> {
+    const db = await this.openDB();
+    await db.put('tracks', track);
+  }
+
+  /**
+   * Retrieves a track by its ID.
+   */
+  async getById(id: string): Promise<Track | null> {
+    const db = await this.openDB();
+    const track = await db.get('tracks', id);
+    return track ?? null;
+  }
+
+  /**
+   * Retrieves all tracks from the database.
+   */
+  async getAll(): Promise<Track[]> {
+    const db = await this.openDB();
+    return await db.getAll('tracks');
+  }
+
+  /**
+   * Deletes a track from the database.
+   */
   async delete(id: string): Promise<void> {
-    const db = await getDB();
-    await db.delete(this.storeName, id);
+    const db = await this.openDB();
+    await db.delete('tracks', id);
   }
 
-  async getById(id: string): Promise<LibraryItem | null> {
-    const db = await getDB();
-    return await db.get(this.storeName, id) as LibraryItem | null;
-  }
-
-  async getAll(): Promise<LibraryItem[]> {
-    const db = await getDB();
-    return db.getAll(this.storeName);
-  }
-
-  async clear(): Promise<void> {
-    const db = await getDB();
-    await db.clear(this.storeName);
+  /**
+   * Closes the database connection.
+   */
+  async close(): Promise<void> {
+    if (this.db) {
+      this.db.close();
+      this.db = null;
+    }
   }
 }

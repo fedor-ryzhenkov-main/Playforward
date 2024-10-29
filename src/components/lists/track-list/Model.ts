@@ -1,263 +1,95 @@
-import { saveAs } from 'file-saver';
-import Track from 'data/models/Track';
-import Playlist from 'data/models/Playlist';
-import LibraryItem from 'data/models/LibraryItem';
+import Track, { createTrack } from 'data/models/Track';
 import BaseService from 'data/services/BaseService';
 import EventDispatcher from 'data/events/EventDispatcher';
-import ClosureEntry from 'data/models/ClosureEntry';
-import TreeNode from 'data/models/TreeNode';
+import { DataChangeEvent } from 'data/events/Types';
+
+interface ExportData {
+  tracks: Track[];
+  version: string;
+}
 
 /**
- * Manages the track and playlist tree structure.
+ * Manages the track collection with tag-based organization.
  */
 export default class TrackListModel {
   private baseService: BaseService;
-  private searchName: string = '';
-  private searchTags: string = '';
+  private cachedTracks: Track[] | null = null;
+  private cachedTags: Set<string> | null = null;
+  private changeListeners: Set<() => void> = new Set();
 
   constructor() {
     this.baseService = new BaseService();
-    EventDispatcher.getInstance().subscribe('dataChanged', this.handleDataChanged.bind(this));
+    EventDispatcher.getInstance().subscribe(
+      'dataChanged',
+      this.handleDataChanged
+    );
   }
 
-  /**
-   * Subscribes to data change events.
-   * @param callback The callback to invoke on data changes.
-   */
-  subscribe(callback: () => void): void {
-    EventDispatcher.getInstance().subscribe('dataChanged', callback);
-  }
+  private handleDataChanged = (event: DataChangeEvent) => {
+    this.cachedTracks = null;
+    this.cachedTags = null;
+    // Notify all listeners
+    this.changeListeners.forEach(listener => listener());
+  };
 
-  /**
-   * Unsubscribes from data change events.
-   * @param callback The callback to remove.
-   */
-  unsubscribe(callback: () => void): void {
-    EventDispatcher.getInstance().unsubscribe('dataChanged', callback);
-  }
-
-  /**
-   * Builds and filters the hierarchical tree structure from the items.
-   * @param searchName The name to filter by.
-   * @param searchTags The tags to filter by.
-   * @returns The filtered hierarchical tree of TreeNodes.
-   */
-  async getFilteredTree(searchName: string, searchTags: string): Promise<TreeNode[]> {
-    this.searchName = searchName;
-    this.searchTags = searchTags;
-
-    // Build the full tree as TreeNodes
-    const fullTree = await this.buildTree();
-    console.log('fullTree', fullTree);
-
-    // Recursively filter the tree
-    const filteredTree = this.filterTree(fullTree);
-    console.log('filteredTree', filteredTree);
-
-    return filteredTree;
-  }
-
-  /**
-   * Builds the hierarchical tree using TreeNodes.
-   * @returns The root-level TreeNodes.
-   */
-  private async buildTree(): Promise<TreeNode[]> {
-    const allItems = await this.baseService.getAllItems();
-    const closureEntries = await this.baseService.getAllClosureEntries();
-
-    // Map item IDs to TreeNodes
-    const nodeMap = new Map<string, TreeNode>();
-    allItems.forEach(item => {
-      nodeMap.set(item.id, new TreeNode(item));
-    });
-
-    // Build parent-child relationships
-    closureEntries.forEach(entry => {
-      if (entry.depth === 1) {
-        const parentNode = nodeMap.get(entry.ancestorId);
-        const childNode = nodeMap.get(entry.descendantId);
-        if (parentNode && childNode && parentNode !== childNode) {
-          parentNode.children.push(childNode);
-        }
-      }
-    });
-
-    // Identify root nodes (nodes without parents)
-    const rootNodes = [];
-    for (const node of nodeMap.values()) {
-      const hasParent = closureEntries.some(
-        entry => entry.descendantId === node.item.id && entry.depth === 1
-      );
-      if (!hasParent) {
-        rootNodes.push(node);
-      }
-    }
-
-    return rootNodes;
-  }
-
-  /**
-   * Recursively filters the tree based on search criteria.
-   * @param nodes The array of TreeNodes to filter.
-   * @returns The filtered array of TreeNodes.
-   */
-  private filterTree(nodes: TreeNode[]): TreeNode[] {
-    const filteredNodes: TreeNode[] = [];
-
-    for (const node of nodes) {
-      const { item, children } = node;
-
-      if (item.type === 'track') {
-        if (this.filterItem(item as Track)) {
-          filteredNodes.push(node);
-        }
-      } else if (item.type === 'playlist') {
-        const filteredChildren = this.filterTree(children);
-
-        if (this.isSearchActive()) {
-          // Include playlist only if it has matching children
-          if (filteredChildren.length > 0) {
-            const newNode = new TreeNode(item);
-            newNode.children = filteredChildren;
-            filteredNodes.push(newNode);
-          }
-        } else {
-          // Include all playlists
-          const newNode = new TreeNode(item);
-          newNode.children = filteredChildren;
-          filteredNodes.push(newNode);
-        }
-      }
-    }
-
-    return filteredNodes;
-  }
-
-  /**
-   * Determines if a search query is active.
-   * @returns True if either searchName or searchTags is non-empty, false otherwise.
-   */
-  private isSearchActive(): boolean {
-    return this.searchName.trim() !== '' || this.searchTags.trim() !== '';
-  }
-
-  /**
-   * Exports all data from IndexedDB into a single JSON file.
-   */
-  async exportData(): Promise<void> {
-    const allItems = await this.baseService.getAllItems();
-    const closureEntries = await this.baseService.getAllClosureEntries();
-
-    const exportData = {
-      libraryItems: allItems.map((item) => {
-        if (item.type === 'track') {
-          const track = item as Track;
-          return {
-            ...track,
-            data: arrayBufferToBase64(track.data),
-          };
-        }
-        return item;
-      }),
-      closureTable: closureEntries,
+  public subscribe(listener: () => void): () => void {
+    this.changeListeners.add(listener);
+    return () => {
+      this.changeListeners.delete(listener);
     };
-
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    saveAs(blob, 'library_export.json');
   }
 
-  /**
-   * Imports data from a JSON file into IndexedDB.
-   */
-  async importData(file: File): Promise<void> {
-    const text = await file.text();
-    const importedData = JSON.parse(text) as { libraryItems: LibraryItem[], closureTable: ClosureEntry[] };
+  async getTracks(searchName: string = '', searchTags: string = ''): Promise<Track[]> {
+    if (!this.cachedTracks) {
+      this.cachedTracks = await this.baseService.getAllTracks();
+    }
+    
+    if (!searchName && !searchTags) {
+      return [...this.cachedTracks].sort((a, b) => a.name.localeCompare(b.name));
+    }
 
-    // Clear existing data
-    await this.baseService.deleteAllItems();
-    await this.baseService.deleteAllClosureEntries();
+    const searchTagsSet = searchTags ? 
+      new Set(searchTags.split(',').map(tag => tag.trim()).filter(tag => tag)) : 
+      new Set<string>();
 
-    // Import library items
-    for (const item of importedData.libraryItems) {
-      if (item.type === 'track') {
-        const track = item as Track;
-        track.data = base64ToArrayBuffer(track.data as unknown as string);
+    return this.cachedTracks.filter(track => {
+      if (searchName && !track.name.toLowerCase().includes(searchName.toLowerCase())) {
+        return false;
       }
-      await this.baseService.addItem(item);
-    }
 
-    console.log('closureTable', importedData.closureTable);
-
-    // Import closure table entries
-    for (const entry of importedData.closureTable) {
-      try {
-        await this.baseService.addClosureEntry(entry);
-      } catch (error) {
-        // If the entry already exists, just ignore the error and continue
-        console.log(`Closure entry already exists, skipping: ${entry.ancestorId} -> ${entry.descendantId}`);
+      if (searchTagsSet.size > 0) {
+        return Array.from(searchTagsSet).every(searchTag =>
+          track.tags.includes(searchTag)
+        );
       }
-    }
 
-    // Trigger a data change event to update the UI
-    EventDispatcher.getInstance().emit('dataChanged', { action: 'import' });
+      return true;
+    }).sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  /**
-   * Determines if a LibraryItem matches the search criteria.
-   * @param item The LibraryItem to check.
-   * @returns True if the item matches, false otherwise.
-   */
-  private filterItem(item: LibraryItem): boolean {
-    let matches = true;
+  async getAllTags(): Promise<string[]> {
+    if (!this.cachedTags) {
+      if (!this.cachedTracks) {
+        this.cachedTracks = await this.baseService.getAllTracks();
+      }
 
-    if (this.searchName) {
-      matches = item.name.toLowerCase().includes(this.searchName.toLowerCase());
+      this.cachedTags = new Set<string>();
+      this.cachedTracks.forEach(track => {
+        track.tags.forEach(tag => this.cachedTags!.add(tag));
+      });
     }
 
-    if (matches && this.searchTags && item.type === 'track') {
-      const track = item as Track;
-      const searchTagsArray = this.searchTags.split(',').map((tag) => tag.trim().toLowerCase());
-      matches = searchTagsArray.every((searchTag) =>
-        track.tags.some((tag) => tag.toLowerCase().includes(searchTag))
-      );
-    }
-
-    return matches;
+    return Array.from(this.cachedTags).sort();
   }
 
-  /**
-   * Creates a new playlist with the given name.
-   * @param playlistName The name of the new playlist.
-   */
-  async createPlaylist(playlistName: string): Promise<void> {
-    try {
-      const playlist: Playlist = {
-        id: crypto.randomUUID(),
-        name: playlistName,
-        type: 'playlist',
-      };
-      await this.baseService.addItem(playlist);
-    } catch (error) {
-      console.error('Error creating playlist:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Adds a new track from the given file.
-   * @param file The audio file to add.
-   */
   async addTrack(file: File): Promise<void> {
     try {
-      const track: Track = {
-        id: crypto.randomUUID(),
-        name: file.name,
-        type: 'track',
-        data: await file.arrayBuffer(),
-        tags: [],
-        description: '',
-      };
-      await this.baseService.addItem(track);
+      const track = createTrack(
+        file.name.replace(/\.[^/.]+$/, ''),
+        await file.arrayBuffer()
+      );
+      await this.baseService.addTrack(track);
+      this.handleDataChanged({ action: 'add', track });
     } catch (error) {
       console.error('Error adding track:', error);
       throw error;
@@ -265,44 +97,48 @@ export default class TrackListModel {
   }
 
   /**
-   * Deletes all items from the library.
+   * Imports tracks from a JSON file.
+   * @param file JSON file containing track data
+   * @throws Error if file format is invalid
    */
-  async deleteAllItems(): Promise<void> {
-    await this.baseService.deleteAllItems();
-  }
+  async importTracks(file: File): Promise<void> {
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text) as ExportData;
 
-  /**
-   * Handles data change events emitted by the BaseService.
-   * @param event The event object containing action and payload.
-   */
-  private async handleDataChanged(event: { action: string; item?: LibraryItem; id?: string }) {
-    if (event.action === 'update') {
-      // Reload the tree or update the specific item if necessary
-      await this.getFilteredTree(this.searchName, this.searchTags);
+      // Validate file format
+      if (!data.version || !data.tracks || !Array.isArray(data.tracks)) {
+        throw new Error('Invalid file format');
+      }
+
+      // Process each track
+      for (const trackData of data.tracks) {
+        // Validate track data
+        if (!trackData.name || !trackData.data || !Array.isArray(trackData.tags)) {
+          console.warn('Skipping invalid track:', trackData.name || 'unnamed');
+          continue;
+        }
+
+        // Convert base64 data back to ArrayBuffer
+        const binaryString = atob(trackData.data as unknown as string);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        const track: Track = {
+          id: crypto.randomUUID(), // Generate new ID for imported track
+          name: trackData.name,
+          data: bytes.buffer,
+          tags: trackData.tags,
+        };
+
+        await this.baseService.addTrack(track);
+        this.handleDataChanged({ action: 'add', track });
+      }
+    } catch (error) {
+      console.error('Error importing tracks:', error);
+      throw error;
     }
-    // Handle other actions ('add', 'delete', 'move', etc.)
   }
-}
-
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const uint8Array = new Uint8Array(buffer);
-  let binaryString = '';
-  const chunkSize = 0x8000;
-
-  for (let i = 0; i < uint8Array.length; i += chunkSize) {
-    const chunk = uint8Array.subarray(i, i + chunkSize);
-    binaryString += String.fromCharCode.apply(null, chunk as any);
-  }
-
-  return btoa(binaryString);
-}
-
-function base64ToArrayBuffer(base64: string): ArrayBuffer {
-  const binaryString = atob(base64);
-  const len = binaryString.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes.buffer;
 }
