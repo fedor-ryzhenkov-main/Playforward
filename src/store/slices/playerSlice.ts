@@ -1,9 +1,16 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import Track from 'data/models/Track';
+
+// Define the serialized track type
+export interface SerializedTrack {
+  id: string;
+  name: string;
+  tags: string[];
+  description?: string;
+}
 
 export interface PlayerState {
   // Track List State
-  tracks: Track[];
+  tracks: SerializedTrack[];
   allTags: string[];
   loading: boolean;
   error: string | null;
@@ -79,7 +86,7 @@ const playerSlice = createSlice({
   initialState,
   reducers: {
     // Track List Actions
-    setTracks: (state, action: PayloadAction<Track[]>) => {
+    setTracks: (state, action: PayloadAction<SerializedTrack[]>) => {
       state.tracks = action.payload;
     },
     setAllTags: (state, action: PayloadAction<string[]>) => {
@@ -106,6 +113,7 @@ const playerSlice = createSlice({
 
     // Audio Player Actions
     addPlayer: (state, action: PayloadAction<string>) => {
+      console.log('[playerSlice] Adding player:', action.payload);
       if (!state.activePlayers[action.payload]) {
         state.activePlayers[action.payload] = {
           isPlaying: false,
@@ -115,14 +123,17 @@ const playerSlice = createSlice({
           isLooping: false,
           isFadeEffectActive: false,
         };
+        console.log('[playerSlice] Player state initialized');
       }
     },
+
     removePlayer: (state, action: PayloadAction<string>) => {
       delete state.activePlayers[action.payload];
       if (state.selectedPlayerId === action.payload) {
         state.selectedPlayerId = null;
       }
     },
+
     updatePlayerState: (state, action: PayloadAction<{
       trackId: string;
       updates: Partial<PlayerState['activePlayers'][string]>;
