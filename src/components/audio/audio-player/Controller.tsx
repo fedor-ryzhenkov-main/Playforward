@@ -1,65 +1,90 @@
 // app/src/components/AudioPlayer/Controller.tsx
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useCallback } from 'react';
+import { useAppDispatch, useAppSelector } from 'store/hooks';
+import { updatePlayerState, removePlayer } from 'store/slices/playerSlice';
 import AudioPlayerView from './View';
-import AudioPlayerModel from './Model';
-import { AudioPlayerState } from './Interfaces';
-import BaseService from 'data/services/BaseService';
+import './Styles.css';
 
 interface AudioPlayerControllerProps {
   trackId: string;
-  onClose: () => void;
+  isSelected?: boolean;
 }
 
-const AudioPlayerController: React.FC<AudioPlayerControllerProps> = ({ trackId, onClose }) => {
-  const [model, setModel] = useState<AudioPlayerModel | null>(null);
-  const [playerState, setPlayerState] = useState<AudioPlayerState>({
-    isPlaying: false,
-    currentTime: 0,
-    duration: 0,
-    volume: 1,
-    isLooping: false,
-    isFadeEffectActive: false,
-  });
+const AudioPlayerController: React.FC<AudioPlayerControllerProps> = ({ 
+  trackId, 
+  isSelected = false 
+}) => {
+  const dispatch = useAppDispatch();
+  const playerState = useAppSelector(state => state.player.activePlayers[trackId]);
+  const track = useAppSelector(state => 
+    state.player.tracks.find(t => t.id === trackId)
+  );
 
-  const baseService = useRef(new BaseService()).current;
-
-  const handleModelUpdates = useCallback((state: Partial<AudioPlayerState>) => {
-    setPlayerState(prevState => ({
-      ...prevState,
-      ...state,
+  const handlePlayPause = useCallback(() => {
+    if (!playerState) return;
+    dispatch(updatePlayerState({
+      trackId,
+      updates: {
+        isPlaying: !playerState.isPlaying
+      }
     }));
-  }, []);
+  }, [dispatch, trackId, playerState?.isPlaying]);
 
-  useEffect(() => {
-    const modelInstance = new AudioPlayerModel(trackId, handleModelUpdates, baseService);
-    setModel(modelInstance);
-    modelInstance.initialize();
+  const handleSeek = useCallback((time: number) => {
+    if (!playerState) return;
+    dispatch(updatePlayerState({
+      trackId,
+      updates: {
+        currentTime: time
+      }
+    }));
+  }, [dispatch, trackId]);
 
-    return () => {
-      modelInstance.close();
-    };
-  }, [trackId, handleModelUpdates, baseService]);
+  const handleVolumeChange = useCallback((volume: number) => {
+    dispatch(updatePlayerState({
+      trackId,
+      updates: {
+        volume
+      }
+    }));
+  }, [dispatch, trackId]);
 
-  const handlePlayPause = useCallback(() => model?.togglePlayPause(), [model]);
-  const handleSeek = useCallback((time: number) => model?.seek(time), [model]);
-  const handleVolumeChange = useCallback((volume: number) => model?.setVolume(volume), [model]);
-  const handleToggleLoop = useCallback(() => model?.toggleLoop(), [model]);
-  const handleToggleFadeEffect = useCallback(() => model?.toggleFadeEffect(), [model]);
+  const handleToggleLoop = useCallback(() => {
+    dispatch(updatePlayerState({
+      trackId,
+      updates: {
+        isLooping: !playerState.isLooping
+      }
+    }));
+  }, [dispatch, trackId, playerState.isLooping]);
+
+  const handleToggleFadeEffect = useCallback(() => {
+    dispatch(updatePlayerState({
+      trackId,
+      updates: {
+        isFadeEffectActive: !playerState.isFadeEffectActive
+      }
+    }));
+  }, [dispatch, trackId, playerState.isFadeEffectActive]);
+
   const handleClose = useCallback(() => {
-    model?.close();
-    onClose();
-  }, [model, onClose]);
+    dispatch(removePlayer(trackId));
+  }, [dispatch, trackId]);
+
+  if (!playerState || !track) return null;
 
   return (
-    <AudioPlayerView
-      playerState={playerState}
-      onPlayPause={handlePlayPause}
-      onSeek={handleSeek}
-      onVolumeChange={handleVolumeChange}
-      onToggleLoop={handleToggleLoop}
-      onToggleFadeEffect={handleToggleFadeEffect}
-      onClose={handleClose}
-    />
+    <div className={`audio-player-wrapper ${isSelected ? 'selected' : ''}`}>
+      <AudioPlayerView
+        playerState={playerState}
+        onPlayPause={handlePlayPause}
+        onSeek={handleSeek}
+        onVolumeChange={handleVolumeChange}
+        onToggleLoop={handleToggleLoop}
+        onToggleFadeEffect={handleToggleFadeEffect}
+        onClose={handleClose}
+      />
+    </div>
   );
 };
 

@@ -1,6 +1,5 @@
 // app/src/hooks/usePrompt.tsx
 import React from 'react';
-import { useModal } from '../contexts/ModalContext';
 import PromptModal from '../components/modals/prompt-modal/PromptModal';
 
 type PromptOptions = {
@@ -10,7 +9,7 @@ type PromptOptions = {
 };
 
 export const usePrompt = () => {
-  const { openModal, closeModal } = useModal();
+  const { openModal, closeModal } = { openModal: () => {}, closeModal: () => {} };
 
   const prompt = (options: PromptOptions): Promise<string | null> => {
     return new Promise((resolve) => {
@@ -25,13 +24,7 @@ export const usePrompt = () => {
       };
 
       openModal(
-        <PromptModal
-          title={options.title}
-          message={options.message}
-          initialValue={options.initialValue}
-          onSubmit={handleSubmit}
-          onClose={handleClose}
-        />
+        
       );
     });
   };

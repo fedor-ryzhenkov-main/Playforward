@@ -1,10 +1,11 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useEffect } from 'react';
+import classNames from 'classnames';
 import Track from 'data/models/Track';
 import TrackItem from 'components/items/track-item/Controller';
 import './Styles.css';
-import { ContextMenuItem, useContextMenu } from 'contexts/ContextMenuContext';
-import { v4 as uuidv4 } from 'uuid';
-import { useTagSearch } from 'hooks/useTagSearch';
+import { useAppDispatch, useAppSelector } from 'store/hooks';
+import { navigateTrack, setTrackListFocus } from 'store/slices/playerSlice';
+import { playSelectedTrack } from 'store/thunks/playerThunks';
 
 interface TrackListViewProps {
   tracks: Track[];
@@ -16,6 +17,7 @@ interface TrackListViewProps {
   onSearchNameChange: (name: string) => void;
   onSearchTagsChange: (tags: string) => void;
   onUploadTrack: (file: File) => void;
+  onTrackPlay: (track: Track) => void;
 }
 
 const TrackListView: React.FC<TrackListViewProps> = ({
@@ -28,103 +30,147 @@ const TrackListView: React.FC<TrackListViewProps> = ({
   onSearchNameChange,
   onSearchTagsChange,
   onUploadTrack,
+  onTrackPlay,
 }) => {
-  const { registerMenuItems, unregisterMenuItems } = useContextMenu();
-  const contextMenuId = useRef(`tracklist-${uuidv4()}`);
+  const dispatch = useAppDispatch();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const nameSearchRef = useRef<HTMLInputElement>(null);
   const tagSearchRef = useRef<HTMLInputElement>(null);
-
-  const {
-    isTagSearchActive,
-    setIsTagSearchActive,
-    currentTags,
-    inputValue,
-    setInputValue,
-    handleTagInput,
-    removeTag
-  } = useTagSearch({ onSearchTagsChange, allTags });
-
-  // Focus tag input when search becomes active
-  useEffect(() => {
-    if (isTagSearchActive && tagSearchRef.current) {
-      tagSearchRef.current.focus();
-    }
-  }, [isTagSearchActive]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const { selectedTrackIndex, isTrackListFocused } = useAppSelector(state => state.player);
 
   // Sort tracks alphabetically
   const sortedTracks = useMemo(() => {
     return [...tracks].sort((a, b) => a.name.localeCompare(b.name));
   }, [tracks]);
 
-  const handleUploadTrack = () => {
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = 'audio/*';
-    fileInput.onchange = async (e) => {
-      const target = e.target as HTMLInputElement;
-      if (target.files && target.files[0]) {
-        await onUploadTrack(target.files[0]);
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      onUploadTrack(files[0]);
+      event.target.value = ''; // Reset input
+    }
+  };
+
+  const handleTagInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && tagSearchRef.current) {
+      const newTag = tagSearchRef.current.value.trim();
+      if (newTag) {
+        const currentTags = searchTags ? searchTags.split(',').map(t => t.trim()) : [];
+        if (!currentTags.includes(newTag)) {
+          const updatedTags = [...currentTags, newTag].join(', ');
+          onSearchTagsChange(updatedTags);
+        }
+        tagSearchRef.current.value = '';
+      }
+    }
+  };
+
+  // Handle keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isTrackListFocused) return;
+
+      switch (e.key) {
+        case 'ArrowUp':
+          e.preventDefault();
+          dispatch(navigateTrack('up'));
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          dispatch(navigateTrack('down'));
+          break;
+        case 'Enter':
+          e.preventDefault();
+          dispatch(playSelectedTrack());
+          break;
       }
     };
-    fileInput.click();
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [dispatch, isTrackListFocused]);
+
+  // Handle focus
+  const handleContainerFocus = () => {
+    dispatch(setTrackListFocus(true));
+  };
+
+  const handleContainerBlur = () => {
+    dispatch(setTrackListFocus(false));
+  };
+
+  // Search shortcuts
+  const handleSearchShortcuts = (e: KeyboardEvent) => {
+    if (e.key === 'f' && e.metaKey) {
+      e.preventDefault();
+      if (e.shiftKey) {
+        tagSearchRef.current?.focus();
+      } else {
+        nameSearchRef.current?.focus();
+      }
+    }
   };
 
   useEffect(() => {
-    const menuItems: ContextMenuItem[] = [
-      {
-        type: 'action',
-        label: 'Upload Track',
-        onClick: handleUploadTrack,
-      }
-    ];
-
-    registerMenuItems(contextMenuId.current, menuItems);
-
-    return () => {
-      unregisterMenuItems(contextMenuId.current);
-    };
-  }, [registerMenuItems, unregisterMenuItems]);
+    window.addEventListener('keydown', handleSearchShortcuts);
+    return () => window.removeEventListener('keydown', handleSearchShortcuts);
+  }, []);
 
   return (
-    <div className="track-list-container" data-contextmenu-id={contextMenuId.current}>
-      <div className="search-container">
-        <input
-          type="text"
-          placeholder="Search by name"
-          value={searchName}
-          onChange={(e) => onSearchNameChange(e.target.value)}
-        />
-        
-        <div className={`tag-search ${isTagSearchActive ? 'active' : ''}`}>
-          <div className="tag-list">
-            {currentTags.map(tag => (
-              <span key={tag} className="tag">
-                {tag}
-                <button onClick={() => removeTag(tag)}>&times;</button>
-              </span>
-            ))}
-          </div>
+    <div 
+      ref={containerRef}
+      className="track-list-container"
+      tabIndex={0}
+      onFocus={handleContainerFocus}
+      onBlur={handleContainerBlur}
+    >
+      <div className="track-list-header">
+        <div className="search-container">
+          <input
+            ref={nameSearchRef}
+            type="text"
+            placeholder="Search by name..."
+            value={searchName}
+            onChange={(e) => onSearchNameChange(e.target.value)}
+            className="search-input"
+          />
           <input
             ref={tagSearchRef}
             type="text"
-            placeholder={isTagSearchActive ? "Enter tag and press Enter" : "Press Cmd+Shift+F to search by tags"}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            placeholder="Search by tags..."
+            value={searchTags}
+            onChange={(e) => onSearchTagsChange(e.target.value)}
             onKeyDown={handleTagInput}
-            list="available-tags"
+            className="search-input"
           />
-          <datalist id="available-tags">
-            {allTags.map(tag => (
-              <option key={tag} value={tag} />
-            ))}
-          </datalist>
         </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="audio/*"
+          onChange={handleFileSelect}
+          style={{ display: 'none' }}
+        />
+        <button 
+          onClick={() => fileInputRef.current?.click()}
+          className="upload-button"
+        >
+          Upload Track
+        </button>
       </div>
 
+      {loading && <div className="loading">Loading...</div>}
       {error && <div className="error">{error}</div>}
       
       <div className="track-list">
-        {sortedTracks.map(track => (
-          <TrackItem key={track.id} track={track} />
+        {sortedTracks.map((track, index) => (
+          <TrackItem
+            key={track.id}
+            track={track}
+            isSelected={index === selectedTrackIndex}
+          />
         ))}
       </div>
     </div>

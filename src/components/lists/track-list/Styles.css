@@ -63,7 +63,6 @@
   cursor: pointer;
 }
 
-.track-item:hover,
 .track-item.selected {
   background-color: #3a3a3a;
 }
@@ -139,8 +138,7 @@
 }
 
 .track-list-container:focus {
-  outline: none; /* Remove default outline if desired */
-  box-shadow: 0 0 0 2px #4caf50; /* Add a custom focus indicator */
+  
 }
 
 .actions-container {
@@ -253,4 +251,3 @@
 .actions-container button:hover {
   background-color: var(--color-surface-hover);
 }
-

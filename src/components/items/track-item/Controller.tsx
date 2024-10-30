@@ -1,166 +1,54 @@
-import React, { useCallback, useEffect, useRef } from 'react';
-import { v4 as uuidv4 } from 'uuid';
-import { useContextMenu, ContextMenuItem } from 'contexts/ContextMenuContext';
-import { useModal } from 'contexts/ModalContext';
-import PromptModal from 'components/modals/prompt-modal/PromptModal';
+import React from 'react';
 import Track from 'data/models/Track';
-import BaseService from 'data/services/BaseService';
+import { useAppSelector, useAppDispatch } from 'store/hooks';
+import { playTrack } from 'store/thunks/playerThunks';
 import './Styles.css';
-import { useAudioPlayer } from 'contexts/AudioPlayerContext';
 
 interface TrackItemProps {
   track: Track;
+  isSelected?: boolean;
 }
 
-const TrackItem: React.FC<TrackItemProps> = ({ track }) => {
-  const { isPlaying, playTrack, stopTrack } = useAudioPlayer();
-  const baseService = new BaseService();
-  const { registerMenuItems, unregisterMenuItems } = useContextMenu();
-  const { openModal, closeModal } = useModal();
-  const contextMenuId = useRef(`track-${track.id}-${uuidv4()}`);
+const TrackItem: React.FC<TrackItemProps> = ({
+  track,
+  isSelected = false,
+}) => {
+  const dispatch = useAppDispatch();
+  const playerState = useAppSelector(state => 
+    state.player.activePlayers[track.id]
+  );
+  
+  const isPlaying = playerState?.isPlaying || false;
 
-  const handleClick = () => {
-    if (isPlaying(track.id)) {
-      stopTrack(track.id);
-    } else {
-      playTrack(track.id);
-    }
+  const handlePlay = () => {
+    dispatch(playTrack(track));
   };
 
-  const handleDeleteTrack = useCallback(async () => {
-    try {
-      await baseService.deleteTrack(track.id);
-    } catch (error) {
-      console.error('Error deleting track:', error);
-    }
-  }, [baseService, track.id]);
-
-  const handleRenameTrack = useCallback(() => {
-    openModal(
-      <PromptModal
-        title="Rename Track"
-        message="Enter new name for the track:"
-        initialValue={track.name}
-        onClose={closeModal}
-        onSubmit={async (newName) => {
-          if (newName && newName.trim() !== '' && newName !== track.name) {
-            try {
-              await baseService.updateTrack({ ...track, name: newName.trim() });
-              closeModal();
-            } catch (error) {
-              console.error('Error renaming track:', error);
-              openModal(
-                <PromptModal
-                  title="Error"
-                  message="Failed to rename track."
-                  onClose={closeModal}
-                  onSubmit={closeModal}
-                />
-              );
-            }
-          } else {
-            closeModal();
-          }
-        }}
-      />
-    );
-  }, [baseService, track, openModal, closeModal]);
-
-  const handleEditTags = useCallback(() => {
-    openModal(
-      <PromptModal
-        title="Edit Tags"
-        message="Enter comma-separated tags:"
-        initialValue={track.tags.join(', ')}
-        onClose={closeModal}
-        onSubmit={async (newTags) => {
-          const tagsArray = newTags.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
-          try {
-            await baseService.updateTrack({ ...track, tags: tagsArray });
-            closeModal();
-          } catch (error) {
-            console.error('Error updating tags:', error);
-            openModal(
-              <PromptModal
-                title="Error"
-                message="Failed to update tags."
-                onClose={closeModal}
-                onSubmit={closeModal}
-              />
-            );
-          }
-        }}
-      />
-    );
-  }, [baseService, track, openModal, closeModal]);
-
-  useEffect(() => {
-    const menuItems: ContextMenuItem[] = [
-      {
-        type: 'action',
-        label: isPlaying(track.id) ? 'Stop Track' : 'Play Track',
-        onClick: handleClick,
-      },
-      {
-        type: 'action',
-        label: 'Delete Track',
-        onClick: handleDeleteTrack,
-      },
-      { 
-        type: 'action',
-        label: 'Rename Track',
-        onClick: handleRenameTrack,
-      },
-      {
-        type: 'action',
-        label: 'Edit Tags',
-        onClick: handleEditTags,
-      },
-    ];
-
-    registerMenuItems(contextMenuId.current, menuItems);
-
-    return () => {
-      unregisterMenuItems(contextMenuId.current);
-    };
-  }, [
-    registerMenuItems,
-    unregisterMenuItems,
-    handleClick,
-    isPlaying,
-    track,
-    handleDeleteTrack,
-    handleRenameTrack,
-    handleEditTags,
-  ]);
-
   return (
-    <div 
-      className="track-item" 
-      data-contextmenu-id={contextMenuId.current}
+    <div
+      className={`track-item ${isSelected ? 'selected' : ''} ${isPlaying ? 'playing' : ''}`}
+      onClick={handlePlay}
     >
-      <div
-        className={`track-info ${isPlaying(track.id) ? 'playing' : ''}`}
-        onClick={handleClick}
-      >
-        <div className="track-details">
-          <div className="track-main-info">
-            <span className="track-name">{track.name}</span>
-            {track.tags.length > 0 && (
-              <span className="track-tags">
-                {track.tags.map((tag, index) => (
-                  <span key={index} className="tag">
-                    {tag}
-                  </span>
-                ))}
-              </span>
-            )}
-          </div>
-          {track.description && (
-            <div className="track-description">{track.description}</div>
-          )}
+      <div className="track-info">
+        <span className="track-name">{track.name}</span>
+        <div className="track-tags">
+          {track.tags.map((tag, index) => (
+            <span key={index} className="tag">
+              {tag}
+            </span>
+          ))}
         </div>
       </div>
+      {isPlaying && (
+        <div className="track-progress">
+          <div 
+            className="progress-bar"
+            style={{
+              width: `${(playerState?.currentTime || 0) / (playerState?.duration || 1) * 100}%`
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };
