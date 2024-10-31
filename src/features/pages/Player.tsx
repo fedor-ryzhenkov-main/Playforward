@@ -1,33 +1,35 @@
 import React, { useEffect } from 'react';
-import { useAppDispatch, useAppSelector } from 'store/hooks';
-import { removePlayer } from 'store/slices/playerSlice';
-import { TrackList } from 'features/player/components/Tracklist/TrackList';
-import TrackPlayer from 'features/player/components/TrackPlayer/Controller';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from 'store';
+import { loadTracksAsync } from 'store/trackThunks';
+import { dbg } from 'utils/debug';
+import { openContextMenu } from 'store/contextMenuSlice';
+import { TrackList } from 'features/player/components/TrackList';
+import { ContextMenu } from 'features/player/components/ContextMenu';
+import { TrackPlayer } from 'features/player/components/TrackPlayer';
 import { Box, Flex } from 'design-system/components';
 
 const PlayerComponent: React.FC = () => {
-  const dispatch = useAppDispatch();
-  const activePlayers = useAppSelector(state => state.player.activePlayers);
-  const selectedTrack = useAppSelector(state => {
-    const { tracks, selectedTrackIndex } = state.player;
-    return selectedTrackIndex >= 0 ? tracks[selectedTrackIndex] : null;
-  });
+  const dispatch = useDispatch<AppDispatch>();
+  const activeTrackIds = useSelector((state: RootState) => state.audio.activeTrackIds);
+  const tracks = useSelector((state: RootState) => state.tracks.trackList);
 
   useEffect(() => {
-    return () => {
-      if (document.visibilityState === 'hidden') {
-        Object.keys(activePlayers).forEach(trackId => {
-          dispatch(removePlayer(trackId));
-        });
-      }
-    };
-  }, []);
+    dbg.store('Player mounted, loading tracks...');
+    dispatch(loadTracksAsync());
+  }, [dispatch]);
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    dispatch(openContextMenu({ x: e.clientX, y: e.clientY }));
+  };
 
   return (
     <Flex
       flexDirection="column"
       height="100vh"
       bg="background.primary"
+      onContextMenu={handleContextMenu}
     >
       <Box 
         as="main"
@@ -37,16 +39,14 @@ const PlayerComponent: React.FC = () => {
         width="100%"
         mx="auto"
       >
-        <TrackList />
-        {selectedTrack && (
-          <Box mt={4}>
-            <TrackPlayer 
-              trackId={selectedTrack.id}
-              isSelected={true}
-            />
+        <TrackList tracks={tracks} />
+        {activeTrackIds.map(trackId => (
+          <Box key={trackId} mt={4}>
+            <TrackPlayer trackId={trackId} />
           </Box>
-        )}
+        ))}
       </Box>
+      <ContextMenu />
     </Flex>
   );
 };

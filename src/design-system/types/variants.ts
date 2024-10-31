@@ -1,81 +1,145 @@
 import { Theme } from './types';
+import { CSSObject } from 'styled-components';
 
 type VariantConfig<T> = {
-  [key: string]: (theme: Theme) => T;
+  [key: string]: (theme: Theme, props: any) => Partial<T>;
 };
 
-export const textVariants: VariantConfig<{
-  fontSize: string;
-  fontWeight: number;
-  lineHeight: number;
-}> = {
+interface VariantStyle {
+  styles: CSSObject;
+  as?: React.ElementType;
+}
+
+export type VariantFunction = (theme: Theme, props: any) => VariantStyle;
+export type VariantMap = Record<string, VariantFunction>;
+
+export const textVariants: VariantMap = {
   title: (theme) => ({
-    fontSize: `${theme.typography.fontSize.xxxl}px`,
-    fontWeight: theme.typography.fontWeight.bold,
-    lineHeight: theme.typography.lineHeight.tight,
+    styles: {
+      fontSize: `${theme.typography.fontSize.xxxl}px`,
+      fontWeight: theme.typography.fontWeight.bold,
+      lineHeight: theme.typography.lineHeight.tight,
+    },
+    as: 'h1',
   }),
   subtitle: (theme) => ({
-    fontSize: `${theme.typography.fontSize.lg}px`,
-    fontWeight: theme.typography.fontWeight.medium,
-    lineHeight: theme.typography.lineHeight.normal,
+    styles: {
+      fontSize: `${theme.typography.fontSize.lg}px`,
+      fontWeight: theme.typography.fontWeight.medium,
+      lineHeight: theme.typography.lineHeight.normal,
+    },
+    as: 'h2',
   }),
   body: (theme) => ({
-    fontSize: `${theme.typography.fontSize.md}px`,
+    styles: {
+      fontSize: `${theme.typography.fontSize.md}px`,
     fontWeight: theme.typography.fontWeight.regular,
-    lineHeight: theme.typography.lineHeight.normal,
+      lineHeight: theme.typography.lineHeight.normal,
+    },
+    as: 'div',
   }),
   caption: (theme) => ({
-    fontSize: `${theme.typography.fontSize.sm}px`,
-    fontWeight: theme.typography.fontWeight.regular,
-    lineHeight: theme.typography.lineHeight.tight,
+    styles: {
+      fontSize: `${theme.typography.fontSize.sm}px`,
+      fontWeight: theme.typography.fontWeight.regular,
+      lineHeight: theme.typography.lineHeight.tight,
+    },
+    as: 'div',
+  }),
+  link: (theme) => ({
+    styles: {
+      color: theme.colors.text.accent,
+    textDecoration: 'none',
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      '&:hover': {
+        color: theme.colors.text.accent,
+      textDecoration: 'underline',
+    },
+    '&:focus': {
+      outline: `2px solid ${theme.colors.text.accent}`,
+      outlineOffset: '2px',
+    },
+    '&:active': {
+      color: theme.colors.text.accent,
+    },
+    '&:visited': {
+      color: theme.colors.text.accent,
+      },
+    },
+    as: 'a',
   }),
 };
 
-export const buttonVariants: VariantConfig<{
-  color: string;
-  backgroundColor: string;
-  '&:hover'?: {
-    opacity?: number;
-    backgroundColor?: string;
-  };
-}> = {
+export const buttonVariants: VariantMap = {
+  // **Size Variants**
+  small: (theme, props) => ({
+    styles: {
+      fontSize: theme.typography.fontSize.sm,
+      padding: theme.spacing.xs,
+      minWidth: theme.spacing.lg,
+      minHeight: theme.spacing.lg,
+      // If circle variant is active, adjust width and height
+      ...(props.variants?.includes('circle') && {
+      width: theme.spacing.lg,
+      height: theme.spacing.lg,
+      minWidth: 'auto',
+        minHeight: 'auto',
+      }),
+    },
+  }),
+
+  medium: (theme, props) => ({
+    styles: {
+      fontSize: theme.typography.fontSize.md,
+      padding: theme.spacing.sm,
+      minWidth: theme.spacing.lg,
+      minHeight: theme.spacing.lg,
+      ...(props.variants?.includes('circle') && {
+      width: theme.spacing.lg,
+      height: theme.spacing.lg,
+      minWidth: 'auto',
+      minHeight: 'auto',
+      }),
+    },
+  }),
+
+  large: (theme, props) => ({
+    styles: {
+      fontSize: theme.typography.fontSize.lg,
+      padding: theme.spacing.md,
+      minWidth: theme.spacing.xl,
+      minHeight: theme.spacing.xl,
+      ...(props.variants?.includes('circle') && {
+      width: theme.spacing.xl,
+      height: theme.spacing.xl,
+      minWidth: 'auto',
+      minHeight: 'auto',
+      }),
+    },
+  }),
+
+  // **Shape Variant**
+  circle: (theme) => ({
+    styles: {
+      borderRadius: '50%',
+      padding: 0,
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  }),
+
+  // **Color Variants**
   primary: (theme) => ({
-    color: theme.colors.text.primary,
-    backgroundColor: theme.colors.main,
-    '&:hover': {
-      opacity: 0.9,
+    styles: {
+      backgroundColor: theme.colors.main,
+      color: theme.colors.text.primary,
+      '&:hover': {
+      backgroundColor: theme.colors.main,
+      },
+      cursor: 'pointer'
     },
-  }),
-  secondary: (theme) => ({
-    color: theme.colors.text.primary,
-    backgroundColor: theme.colors.background.secondary,
-    '&:hover': {
-      backgroundColor: theme.colors.background.accent,
-    },
-  }),
-  ghost: (theme) => ({
-    color: theme.colors.text.primary,
-    backgroundColor: 'transparent',
-    '&:hover': {
-      backgroundColor: theme.colors.background.accent,
-    },
+    as: 'button'
   }),
 };
-
-export const buttonSizes: VariantConfig<{
-  fontSize: string;
-  padding: string;
-}> = {
-  small: (theme) => ({
-    fontSize: `${theme.typography.fontSize.sm}px`,
-    padding: `${theme.spacing.xs}px ${theme.spacing.sm}px`,
-  }),
-  medium: (theme) => ({
-    fontSize: `${theme.typography.fontSize.md}px`,
-    padding: `${theme.spacing.sm}px ${theme.spacing.md}px`,
-  }),
-  large: (theme) => ({
-    fontSize: `${theme.typography.fontSize.lg}px`,
-    padding: `${theme.spacing.md}px ${theme.spacing.lg}px`,
-  }),
-}; 

@@ -1,5 +1,6 @@
 import styled from 'styled-components';
 import shouldForwardProp from '@styled-system/should-forward-prop';
+import { SxProps } from '../../types/sx';
 
 import {
   space,
@@ -28,6 +29,7 @@ export interface BoxProps
     PositionProps,
     ShadowProps {
   as?: keyof JSX.IntrinsicElements;
+  sx?: SxProps;
 }
 
 const boxStyles = compose(
@@ -41,9 +43,10 @@ const boxStyles = compose(
 );
 
 export const Box = styled('div').withConfig({
-  shouldForwardProp: (prop) => shouldForwardProp(prop),
+  shouldForwardProp: (prop) => shouldForwardProp(prop) && prop !== 'sx',
 })<BoxProps>`
   ${boxStyles}
+  ${({ sx, theme }) => sx && (typeof sx === 'function' ? sx({ theme }) : sx)}
 `;
 
 Box.displayName = 'Box';

@@ -23,7 +23,7 @@ const Welcome: React.FC = () => {
       >
         <Text
           as="h1"
-          variant="title"
+          variants={['title']}
           mb={2}
           color="text.primary"
         >
@@ -41,19 +41,19 @@ const Welcome: React.FC = () => {
           gap={2}
           width="100%"
           mb={4}
+          justifyContent="center"
+          alignItems="center"
         >
           <Button
-            variant="secondary"
+            variants={['primary', 'medium']}
             onClick={() => navigate('/player')}
-            fullWidth
           >
             Launch
           </Button>
           
           <Button
-            variant="secondary"
+            variants={['primary', 'medium']}
             onClick={() => navigate('/settings')}
-            fullWidth
           >
             Settings
           </Button>
@@ -64,12 +64,8 @@ const Welcome: React.FC = () => {
         <Text color="text.secondary" fontSize="sm">
           Created by{' '}
           <Text
-            as="a"
+            variants={['link']}
             href="https://inner-space.fedor-ryzhenkov.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            color="text.accent"
-            style={{ textDecoration: 'none' }}
           >
             Fedor Ryzhenkov
           </Text>

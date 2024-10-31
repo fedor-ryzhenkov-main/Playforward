@@ -1,11 +1,14 @@
-export const debugLog = (component: string, action: string, data?: any) => {
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`[${component}] ${action}`, data ? data : '');
-  }
+import debug from 'debug';
+
+export const createDebugger = (namespace: string) => {
+  const dbg = debug(`musicplayer:${namespace}`);
+  dbg.enabled = true;
+  return dbg;
 };
 
-export const debugError = (component: string, error: any) => {
-  if (process.env.NODE_ENV === 'development') {
-    console.error(`[${component}] Error:`, error);
-  }
-}; 
+export const dbg = {
+  db: createDebugger('db'),
+  store: createDebugger('store'),
+  track: createDebugger('track'),
+  audio: createDebugger('audio')
+};

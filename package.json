@@ -22,6 +22,7 @@
     "@types/styled-components": "^5.1.34",
     "buffer": "^6.0.3",
     "classnames": "^2.5.1",
+    "debug": "^4.3.7",
     "file-saver": "^2.0.5",
     "howler": "^2.2.4",
     "http": "^0.0.1-security",
@@ -68,6 +69,7 @@
     ]
   },
   "devDependencies": {
+    "@types/debug": "^4.1.12",
     "@types/file-saver": "^2.0.7",
     "@types/howler": "^2.2.12",
     "@types/lodash": "^4.17.9",

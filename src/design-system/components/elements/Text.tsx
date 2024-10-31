@@ -1,24 +1,26 @@
-import styled from 'styled-components';
 import { typography, space, color, TypographyProps, SpaceProps, ColorProps } from 'styled-system';
-import { createVariant } from '../../utils/createVariant';
+import { createComponent } from '../../utils/createComponent';
 import { textVariants } from '../../types/variants';
-import shouldForwardProp from '@styled-system/should-forward-prop';
+import { commonModifiers } from '../../types/modifiers';
+import { SxProps } from '../../types/sx';
 
-export interface TextProps extends TypographyProps, SpaceProps, ColorProps {
+interface TextProps extends 
+  TypographyProps, 
+  SpaceProps, 
+  ColorProps,
+  Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, keyof TypographyProps | keyof SpaceProps | keyof ColorProps> {
+  variants?: Array<keyof typeof textVariants>;
+  sx?: SxProps;
   as?: keyof JSX.IntrinsicElements;
-  variant?: keyof typeof textVariants;
 }
 
-export const Text = styled('p').withConfig({
-  shouldForwardProp: (prop) => shouldForwardProp(prop),
-})<TextProps>`
-  font-family: ${({ theme }) => theme.typography.fontFamily};
-  ${createVariant(textVariants)}
-  ${typography}
-  ${space}
-  ${color}
-`;
-
-Text.defaultProps = {
-  variant: 'body',
-};
+export const Text = createComponent<TextProps>({
+  displayName: 'Text',
+  tag: 'p',
+  systemProps: [typography, space, color],
+  variants: textVariants,
+  modifiers: commonModifiers,
+  defaultProps: {
+    variants: ['body'],
+  },
+});

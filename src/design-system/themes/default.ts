@@ -46,84 +46,12 @@ export const lightTheme: Theme = {
       tight: 1.2,
       normal: 1.5,
       relaxed: 1.75,
-    },
-    variants: {
-      title: {
-        fontSize: 'xl',
-        fontWeight: 'bold',
-        lineHeight: 'tight',
-      },
-      subtitle: {
-        fontSize: 'lg',
-        fontWeight: 'medium',
-        lineHeight: 'normal',
-      },
-      body: {
-        fontSize: 'md',
-        fontWeight: 'regular',
-        lineHeight: 'normal',
-      },
-      caption: {
-        fontSize: 'sm',
-        fontWeight: 'regular',
-        lineHeight: 'tight',
-      },
-    },
+    }
   },
   breakpoints: [
     '320px',
     '768px',
     '1024px',
     '1280px',
-  ],
-  components: {
-    button: {
-      variants: {
-        primary: {
-          color: 'primary',
-          bg: 'main',
-          hover: {
-            opacity: 0.9
-          }
-        },
-        secondary: {
-          color: 'primary',
-          bg: 'background.secondary',
-          hover: {
-            bg: 'accent'
-          }
-        },
-        ghost: {
-          color: 'primary',
-          bg: 'transparent',
-          hover: {
-            bg: 'accent'
-          }
-        }
-      },
-      sizes: {
-        small: {
-          fontSize: 'sm',
-          padding: {
-            x: 'sm',
-            y: 'xs'
-          }
-        },
-        medium: {
-          fontSize: 'md',
-          padding: {
-            x: 'md',
-            y: 'sm'
-          }
-        },
-        large: {
-          fontSize: 'lg',
-          padding: {
-            x: 'lg',
-            y: 'md'
-          }
-        }
-      }
-    }
-  }
+  ]
 };

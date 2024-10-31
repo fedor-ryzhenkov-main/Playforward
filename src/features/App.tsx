@@ -1,11 +1,11 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from 'design-system/ThemeContext';
+import { Provider } from 'react-redux';
+import store from 'store';
 import Welcome from 'features/pages/Welcome';
 import Player from 'features/pages/Player';
 import Settings from 'features/pages/Settings';
-import { store } from 'store';
-import { Provider } from 'react-redux';
 
 const App: React.FC = () => {
   return (

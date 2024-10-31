@@ -1,38 +1,43 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import { v4 as uuidv4 } from 'uuid';
+import { SerializedTrack } from './Track';
 
-interface TrackDB extends DBSchema {
+interface MusicLibraryDB extends DBSchema {
   tracks: {
     key: string;
-    value: {
-      id: string;
-      name: string;
-      tags: string[];
-      description?: string;
-      audio?: ArrayBuffer;
-    };
+    value: SerializedTrack;
     indexes: { 
       'by-name': string;
       'by-tags': string[];
     };
   };
+  audio: {
+    key: string;
+    value: {
+      id: string;
+      data: ArrayBuffer;
+      lastModified: number;
+    };
+  };
 }
 
-let db: IDBPDatabase<TrackDB>;
+const DB_VERSION = 1;
+let db: IDBPDatabase<MusicLibraryDB>;
 
 /**
  * Gets or initializes the database connection.
- * @returns Promise<IDBPDatabase<MyDB>> Database instance
+ * @returns Promise<IDBPDatabase<MusicLibraryDB>> Database instance
  */
-export async function getDB(): Promise<IDBPDatabase<TrackDB>> {
+export async function getDB(): Promise<IDBPDatabase<MusicLibraryDB>> {
   if (!db) {
-    db = await openDB<TrackDB>('musicLibrary', 1, {
+    db = await openDB<MusicLibraryDB>('musicLibrary', DB_VERSION, {
       upgrade(database) {
-        if (!database.objectStoreNames.contains('tracks')) {
-          const trackStore = database.createObjectStore('tracks', { keyPath: 'id' });
-          trackStore.createIndex('by-name', 'name');
-          trackStore.createIndex('by-tags', 'tags', { multiEntry: true });
-        }
+        // Create tracks store with indexes
+        const trackStore = database.createObjectStore('tracks', { keyPath: 'id' });
+        trackStore.createIndex('by-name', 'name');
+        trackStore.createIndex('by-tags', 'tags', { multiEntry: true });
+
+        // Create audio store
+        database.createObjectStore('audio', { keyPath: 'id' });
       },
     });
   }
@@ -45,8 +50,6 @@ export async function getDB(): Promise<IDBPDatabase<TrackDB>> {
 export async function closeDB(): Promise<void> {
   if (db) {
     db.close();
-    db = null as unknown as IDBPDatabase<TrackDB>;
+    db = null as unknown as IDBPDatabase<MusicLibraryDB>;
   }
 }
-
-export { uuidv4 };

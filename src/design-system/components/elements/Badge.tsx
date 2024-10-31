@@ -8,10 +8,9 @@ export interface BadgeProps extends BoxProps {
 export const Badge = styled(Box)<BadgeProps>`
   display: inline-flex;
   align-items: center;
-  padding: ${({ theme }) => `${theme.spacing.xs}px ${theme.spacing.sm}px`};
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
-  font-size: ${({ theme }) => theme.fontSizes.sm};
-  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  padding: ${({ theme }) => `${theme.spacing.xs}px ${theme.spacing.xs}px`};
+  font-size: ${({ theme }) => theme.typography.fontSize.sm};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   
   ${({ variant = 'primary', theme }) => {
     const variants = {

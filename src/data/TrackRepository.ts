@@ -1,21 +1,92 @@
-import { Track } from 'data/Track';
+import { Track, SerializedTrack } from 'data/Track';
 import { getDB } from 'data/Database';
+import { dbg } from 'utils/debug';
+
+/**
+ * Represents a track record in the database
+ */
+interface TrackRecord extends SerializedTrack {
+  audio?: ArrayBuffer;
+}
 
 /**
  * Repository for managing tracks in IndexedDB.
+ * Handles the persistence and retrieval of Track entities and their audio data.
+ */
+/**
+ * Repository for managing tracks in IndexedDB.
+ * Handles the persistence and retrieval of Track entities and their audio data.
+ * Implements the singleton pattern to ensure only one instance exists.
  */
 export class TrackRepository {
+  private static instance: TrackRepository | null = null;
+
+  private constructor() {}
+
   /**
-   * Adds a new track to the database.
+   * Gets the singleton instance of TrackRepository.
+   * Creates a new instance if one doesn't exist.
    */
-  async add(track: Track, audio: ArrayBuffer): Promise<Track> {
+  public static getInstance(): TrackRepository {
+    if (!TrackRepository.instance) {
+      TrackRepository.instance = new TrackRepository();
+    }
+    return TrackRepository.instance;
+  }
+
+  /**
+   * Adds or updates a track in the database.
+   * @throws {Error} If database operation fails
+   */
+  async save(track: Track, audio?: ArrayBuffer): Promise<Track> {
+    dbg.db(`Saving track ${track.id}`);
     const db = await getDB();
-    await db.put('tracks', {
-      ...track.toJSON(),
-      audio
-    });
-    track.setAudio(audio);
-    return track;
+    const tx = db.transaction(['tracks', 'audio'], 'readwrite');
+
+    try {
+      dbg.db('Saving track metadata...');
+      await tx.objectStore('tracks').put(track.serialize());
+
+      if (audio) {
+        dbg.db(`Saving audio data (${audio.byteLength} bytes)...`);
+        await tx.objectStore('audio').put({
+          id: track.id,
+          data: audio,
+          lastModified: Date.now()
+        });
+        track.setAudio(audio);
+        dbg.db('Audio data saved successfully');
+      }
+
+      await tx.done;
+      dbg.db(`Track ${track.id} saved successfully`);
+      return track;
+    } catch (error) {
+      if (error instanceof Error) {
+        dbg.db(`Failed to save track: ${error.message}`);
+      } else {
+        dbg.db('Failed to save track: Unknown error');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Retrieves a track's audio data by its ID.
+   * @throws {Error} If track not found
+   */
+  async getAudio(id: string): Promise<ArrayBuffer> {
+    dbg.db(`Fetching audio for track ${id}`);
+    const db = await getDB();
+    const audioRecord = await db.get('audio', id);
+    
+    if (!audioRecord?.data) {
+      dbg.db(`Audio not found for track ${id}`);
+      throw new Error(`Audio not found for track ${id}`);
+    }
+    
+    dbg.db(`Retrieved audio data (${audioRecord.data.byteLength} bytes)`);
+    return audioRecord.data;
   }
 
   /**
@@ -23,32 +94,32 @@ export class TrackRepository {
    */
   async getTrack(id: string): Promise<Track | null> {
     const db = await getDB();
-    const data = await db.get('tracks', id);
-    if (!data) return null;
+    const record = await db.get('tracks', id) as TrackRecord | undefined;
     
-    const track = Track.fromJSON(data);
-    if (data.audio) {
-      track.setAudio(data.audio);
+    if (!record) return null;
+    
+    const track = Track.fromSerialized(record);
+    if (record.audio) {
+      track.setAudio(record.audio);
     }
     return track;
   }
 
   /**
-   * Retrieves all tracks.
+   * Retrieves all tracks (without audio data).
    */
   async getAll(): Promise<Track[]> {
     const db = await getDB();
-    const tracks = await db.getAll('tracks');
-    return tracks.map(data => Track.fromJSON(data));
+    const records = await db.getAll('tracks') as TrackRecord[];
+    return records.map(record => Track.fromSerialized(record));
   }
 
   /**
-   * Deletes a track from the database.
+   * Deletes a track and its audio data from the database.
    */
-  async delete(id: string): Promise<string> {
+  async delete(id: string): Promise<void> {
     const db = await getDB();
     await db.delete('tracks', id);
-    return id;
   }
 
   /**
@@ -66,8 +137,8 @@ export class TrackRepository {
     const db = await getDB();
     const index = db.transaction('tracks').store.index('by-tags');
     const keyRange = IDBKeyRange.only(tag);
-    const tracks = await index.getAll(keyRange);
-    return tracks.map(data => Track.fromJSON(data));
+    const records = await index.getAll(keyRange) as TrackRecord[];
+    return records.map(record => Track.fromSerialized(record));
   }
 
   /**
@@ -76,7 +147,7 @@ export class TrackRepository {
   async searchByName(name: string): Promise<Track[]> {
     const db = await getDB();
     const index = db.transaction('tracks').store.index('by-name');
-    const tracks = await index.getAll(name);
-    return tracks.map(data => Track.fromJSON(data));
+    const records = await index.getAll(name) as TrackRecord[];
+    return records.map(record => Track.fromSerialized(record));
   }
 }

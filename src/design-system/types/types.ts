@@ -31,29 +31,6 @@ export interface ThemeBreakpoints {
   breakpoints: string[];
 }
 
-export interface TextVariants {
-  title: {
-    fontSize: keyof ThemeTypography['fontSize'];
-    fontWeight: keyof ThemeTypography['fontWeight'];
-    lineHeight: keyof ThemeTypography['lineHeight'];
-  };
-  subtitle: {
-    fontSize: keyof ThemeTypography['fontSize'];
-    fontWeight: keyof ThemeTypography['fontWeight'];
-    lineHeight: keyof ThemeTypography['lineHeight'];
-  };
-  body: {
-    fontSize: keyof ThemeTypography['fontSize'];
-    fontWeight: keyof ThemeTypography['fontWeight'];
-    lineHeight: keyof ThemeTypography['lineHeight'];
-  };
-  caption: {
-    fontSize: keyof ThemeTypography['fontSize'];
-    fontWeight: keyof ThemeTypography['fontWeight'];
-    lineHeight: keyof ThemeTypography['lineHeight'];
-  };
-}
-
 export interface ThemeTypography {
   fontFamily: string;
   fontSize: {
@@ -75,14 +52,6 @@ export interface ThemeTypography {
     normal: number;
     relaxed: number;
   };
-  variants: TextVariants;
-}
-
-export interface ThemeComponents {
-  button: {
-    variants: ButtonVariants;
-    sizes: ButtonSizes;
-  };
 }
 
 export interface Theme {
@@ -90,61 +59,9 @@ export interface Theme {
   spacing: ThemeSpacing;
   typography: ThemeTypography;
   breakpoints: string[];
-  components: ThemeComponents;
 }
 
 export type ThemeColorPaths = 
   | keyof ThemeColors 
   | `background.${keyof ThemeColors['background']}`
   | `text.${keyof ThemeColors['text']}`;
-
-export interface ButtonVariants {
-  primary: {
-    color: keyof ThemeColors['text'];
-    bg: ThemeColorPaths;
-    hover: {
-      opacity?: number;
-      bg?: keyof ThemeColors['background'];
-    };
-  };
-  secondary: {
-    color: keyof ThemeColors['text'];
-    bg: ThemeColorPaths;
-    hover: {
-      opacity?: number;
-      bg?: keyof ThemeColors['background'];
-    };
-  };
-  ghost: {
-    color: keyof ThemeColors['text'];
-    bg: 'transparent';
-    hover: {
-      opacity?: number;
-      bg?: keyof ThemeColors['background'];
-    };
-  };
-}
-
-export interface ButtonSizes {
-  small: {
-    fontSize: keyof ThemeTypography['fontSize'];
-    padding: {
-      x: keyof ThemeSpacing;
-      y: keyof ThemeSpacing;
-    };
-  };
-  medium: {
-    fontSize: keyof ThemeTypography['fontSize'];
-    padding: {
-      x: keyof ThemeSpacing;
-      y: keyof ThemeSpacing;
-    };
-  };
-  large: {
-    fontSize: keyof ThemeTypography['fontSize'];
-    padding: {
-      x: keyof ThemeSpacing;
-      y: keyof ThemeSpacing;
-    };
-  };
-} 

@@ -2,6 +2,7 @@ import styled from 'styled-components';
 import { Box, BoxProps } from './Box';
 import { Theme } from '../../types/types';
 import { ThemeSpacing } from '../../types/types';
+import { SxProps } from '../../types/sx';
 
 export interface ListProps extends BoxProps {
   /**
@@ -16,6 +17,10 @@ export interface ListProps extends BoxProps {
    * Whether to show list bullets/numbers
    */
   unstyled?: boolean;
+  /**
+   * Custom styles using the sx prop pattern
+   */
+  sx?: SxProps;
 }
 
 export interface ListItemProps extends BoxProps {
@@ -27,6 +32,10 @@ export interface ListItemProps extends BoxProps {
    * Whether the item is interactive (shows hover effects)
    */
   interactive?: boolean;
+  /**
+   * Custom styles using the sx prop pattern
+   */
+  sx?: SxProps;
 }
 
 export const ListItem = styled(Box).attrs({ as: 'li' })<ListItemProps>`
@@ -43,6 +52,8 @@ export const ListItem = styled(Box).attrs({ as: 'li' })<ListItemProps>`
   ${({ selected, theme }: { selected?: boolean; theme: Theme }) => selected && `
     background-color: ${theme.colors.background.accent};
   `}
+
+  ${({ sx, theme }) => sx && typeof sx === 'function' ? sx({ theme }) : sx}
 `;
 
 export const List = styled(Box).attrs<ListProps>(({ unstyled = true, as = 'ul' }) => ({
@@ -75,6 +86,8 @@ export const List = styled(Box).attrs<ListProps>(({ unstyled = true, as = 'ul' }
         : `margin-top: ${theme.spacing.sm}px`;
     }}
   }
+
+  ${({ sx, theme }) => sx && typeof sx === 'function' ? sx({ theme }) : sx}
 `;
 
 List.displayName = 'List';
