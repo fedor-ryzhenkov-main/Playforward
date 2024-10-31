@@ -1,5 +1,5 @@
 // Controller.tsx
-import React, { useCallback } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from 'store';
 import { getAudioEngine } from 'store/audioMiddleware';
@@ -13,12 +13,38 @@ export const TrackPlayer: React.FC<TrackPlayerProps> = ({ trackId }) => {
     state.audio.playerStates[trackId]
   );
 
+  const [isSeeking, setIsSeeking] = useState(false);
+  const [seekValue, setSeekValue] = useState(0);
+
+  useEffect(() => {
+    if (!isSeeking) {
+      setSeekValue(playerState.currentTime);
+    }
+  }, [playerState.currentTime, isSeeking]);
+
   const handlePlayPause = useCallback(() => {
     getAudioEngine().togglePlayPause(trackId);
   }, [trackId]);
 
-  const handleSeek = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    getAudioEngine().seek(trackId, parseFloat(e.target.value));
+  const handleSeekStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    setIsSeeking(true);
+  }, []);
+
+  const handleSeekChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(e.target.value);
+    setSeekValue(value);
+  }, []);
+
+  const handleSeekMouseEnd = useCallback((e: React.MouseEvent<HTMLInputElement>) => {
+    const value = parseFloat(e.currentTarget.value);
+    getAudioEngine().seek(trackId, value);
+    setIsSeeking(false);
+  }, [trackId]);
+
+  const handleSeekTouchEnd = useCallback((e: React.TouchEvent<HTMLInputElement>) => {
+    const value = parseFloat(e.currentTarget.value);
+    getAudioEngine().seek(trackId, value);
+    setIsSeeking(false);
   }, [trackId]);
 
   const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -45,8 +71,12 @@ export const TrackPlayer: React.FC<TrackPlayerProps> = ({ trackId }) => {
         type="range"
         min="0"
         max={playerState.duration}
-        value={playerState.currentTime}
-        onChange={handleSeek}
+        value={isSeeking ? seekValue : playerState.currentTime}
+        onChange={handleSeekChange}
+        onMouseDown={handleSeekStart}
+        onMouseUp={handleSeekMouseEnd}
+        onTouchStart={handleSeekStart}
+        onTouchEnd={handleSeekTouchEnd}
         step="0.1"
       />
 

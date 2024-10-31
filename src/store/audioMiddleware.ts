@@ -34,7 +34,7 @@ audioMiddleware.startListening({
 audioMiddleware.startListening({
   actionCreator: removeActiveTrack,
   effect: (action) => {
-    audioEngine.unload(action.payload);
+    audioEngine.unloadTrack(action.payload);
   },
 });
 
