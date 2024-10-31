@@ -1,7 +1,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { Track } from 'data/Track';
 import { TrackRepository } from 'data/TrackRepository';
-import { setTracks, addTrack } from './trackSlice';
+import { setTracks, addTrack } from 'store/tracks/trackSlice';
 import { dbg } from 'utils/debug';
 
 export const loadTracksAsync = createAsyncThunk(

@@ -1,8 +1,8 @@
 import { configureStore } from '@reduxjs/toolkit';
-import tracksReducer from './trackSlice';
-import audioReducer from './audioSlice';
+import tracksReducer from './tracks/trackSlice';
+import audioReducer from './audio/audioSlice';
 import contextMenuReducer from './contextMenuSlice';
-import { audioMiddleware, initializeAudioEngine } from './audioMiddleware';
+import { audioMiddleware, initializeAudioEngine } from './audio/audioMiddleware';
 
 /**
  * Configures the Redux store with track and playback reducers.

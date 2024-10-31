@@ -19,6 +19,7 @@ export const textVariants: VariantMap = {
       fontSize: `${theme.typography.fontSize.xxxl}px`,
       fontWeight: theme.typography.fontWeight.bold,
       lineHeight: theme.typography.lineHeight.tight,
+      color: theme.colors.text.primary,
     },
     as: 'h1',
   }),
@@ -27,6 +28,7 @@ export const textVariants: VariantMap = {
       fontSize: `${theme.typography.fontSize.lg}px`,
       fontWeight: theme.typography.fontWeight.medium,
       lineHeight: theme.typography.lineHeight.normal,
+      color: theme.colors.text.primary,
     },
     as: 'h2',
   }),
@@ -35,6 +37,7 @@ export const textVariants: VariantMap = {
       fontSize: `${theme.typography.fontSize.md}px`,
     fontWeight: theme.typography.fontWeight.regular,
       lineHeight: theme.typography.lineHeight.normal,
+      color: theme.colors.text.primary,
     },
     as: 'div',
   }),
@@ -43,6 +46,7 @@ export const textVariants: VariantMap = {
       fontSize: `${theme.typography.fontSize.sm}px`,
       fontWeight: theme.typography.fontWeight.regular,
       lineHeight: theme.typography.lineHeight.tight,
+      color: theme.colors.text.primary,
     },
     as: 'div',
   }),
@@ -141,5 +145,49 @@ export const buttonVariants: VariantMap = {
       cursor: 'pointer'
     },
     as: 'button'
+  }),
+};
+
+export const containerVariants: VariantMap = {
+  default: (theme) => ({
+    styles: {
+      width: '100%',
+    },
+  }),
+};
+
+export const flexVariants: VariantMap = {
+  row: (theme) => ({
+    styles: {
+      display: 'flex',
+      flexDirection: 'row',
+    },
+  }),
+  column: (theme) => ({
+    styles: {
+      display: 'flex',
+      flexDirection: 'column',
+    },
+  }),
+  wrap: (theme) => ({
+    styles: {
+      flexWrap: 'wrap',
+    },
+  }),
+};
+
+export const gridVariants: VariantMap = {
+  default: (theme) => ({
+    styles: {
+      display: 'grid',
+    },
+  }),
+};
+
+export const listVariants: VariantMap = {
+  default: (theme) => ({
+    styles: {
+      listStyle: 'none',
+    },
   }),
 };

@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { TrackMetadata } from 'data/Track';
-import { loadTracksAsync } from 'store/trackThunks';
+import { loadTracksAsync } from 'store/tracks/trackThunks';
 
 interface TrackState {
   trackList: TrackMetadata[];

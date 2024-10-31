@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Box, Text } from 'design-system/components';
 import { RootState, AppDispatch } from 'store';
 import { closeContextMenu } from 'store/contextMenuSlice';
-import { uploadTrackAsync } from 'store/trackThunks';
+import { uploadTrackAsync } from 'store/tracks/trackThunks';
 import { dbg } from 'utils/debug';
 
 export const ContextMenu: React.FC = () => {

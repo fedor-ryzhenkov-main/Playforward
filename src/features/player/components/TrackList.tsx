@@ -1,8 +1,8 @@
 import React from 'react';
 import { useDispatch } from 'react-redux';
-import { Box, Text } from 'design-system/components';
+import { Box, List, ListItem, Text } from 'design-system/components';
 import { TrackMetadata } from 'data/Track';
-import { createTrackPlayer } from 'store/audioThunks';
+import { createTrackPlayer } from 'store/audio/audioThunks';
 import { dbg } from 'utils/debug';
 import { AppDispatch } from 'store';
 
@@ -24,20 +24,26 @@ export const TrackList: React.FC<TrackListProps> = ({ tracks }) => {
   };
 
   return (
-    <Box>
+    <List spacing="md">
       {tracks.map(track => (
-        <Box
+        <ListItem
           key={track.id}
+          interactive
           onClick={() => handleTrackClick(track.id)}
-          sx={{
-            cursor: 'pointer',
-            p: 2,
-            '&:hover': { backgroundColor: 'background.accent' }
-          }}
+          bg="background.secondary"
+          p={3}
+          borderRadius="8px"
         >
-          <Text variants={['body']}>{track.name}</Text>
-        </Box>
+          <Box>
+            <Text variants={['subtitle']} mb={1}>
+              {track.name}
+            </Text>
+            <Text variants={['caption']} color="text.secondary">
+              {track.description ? track.description : '--'}
+            </Text>
+          </Box>
+        </ListItem>
       ))}
-    </Box>
+    </List>
   );
 };

@@ -1,106 +1,75 @@
-import styled from 'styled-components';
-import { Box, BoxProps } from './Box';
-import { Theme } from '../../types/types';
+import { createComponent } from '../../utils/createComponent';
+import { BoxProps } from './Box';
 import { ThemeSpacing } from '../../types/types';
-import { SxProps } from '../../types/sx';
 
-export interface ListProps extends BoxProps {
-  /**
-   * Spacing between list items in rem units or theme spacing key
-   */
+interface ListProps extends BoxProps {
   spacing?: keyof ThemeSpacing | number;
-  /**
-   * Whether to render list items horizontally
-   */
   horizontal?: boolean;
-  /**
-   * Whether to show list bullets/numbers
-   */
   unstyled?: boolean;
-  /**
-   * Custom styles using the sx prop pattern
-   */
-  sx?: SxProps;
 }
 
-export interface ListItemProps extends BoxProps {
-  /**
-   * Whether the item is currently selected
-   */
+interface ListItemProps extends BoxProps {
   selected?: boolean;
-  /**
-   * Whether the item is interactive (shows hover effects)
-   */
   interactive?: boolean;
-  /**
-   * Custom styles using the sx prop pattern
-   */
-  sx?: SxProps;
 }
 
-export const ListItem = styled(Box).attrs({ as: 'li' })<ListItemProps>`
-  ${({ interactive, theme }) => interactive && `
-    cursor: pointer;
-    transition: background-color 0.2s;
-    border-radius: 0.5rem;
+export const List = createComponent<ListProps>({
+  displayName: 'List',
+  tag: 'ul',
+  variants: {
+    default: (theme, { spacing, horizontal, unstyled = true }) => ({
+      styles: {
+        margin: 0,
+        padding: 0,
+        listStyle: unstyled ? 'none' : 'inherit',
+        ...(horizontal && {
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+        }),
+        '> * + *': spacing 
+          ? {
+              [horizontal ? 'marginLeft' : 'marginTop']: typeof spacing === 'number'
+                ? `${spacing}rem`
+                : `${theme.spacing[spacing as keyof ThemeSpacing]}px`,
+            }
+          : {
+              [horizontal ? 'marginLeft' : 'marginTop']: `${theme.spacing.sm}px`,
+            },
+      },
+    }),
+  },
+  defaultProps: {
+    variants: ['default'],
+    unstyled: true,
+    horizontal: false,
+    spacing: 'sm',
+  },
+});
 
-    &:hover {
-      background-color: ${({ theme }: { theme: Theme }) => theme.colors.background.accent};
-    }
-  `}
-
-  ${({ selected, theme }: { selected?: boolean; theme: Theme }) => selected && `
-    background-color: ${theme.colors.background.accent};
-  `}
-
-  ${({ sx, theme }) => sx && typeof sx === 'function' ? sx({ theme }) : sx}
-`;
-
-export const List = styled(Box).attrs<ListProps>(({ unstyled = true, as = 'ul' }) => ({
-  as,
-}))<ListProps>`
-  margin: 0;
-  padding: 0;
-  list-style: ${({ unstyled }) => unstyled ? 'none' : 'inherit'};
-  
-  ${({ horizontal }) => horizontal && `
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-  `}
-
-  > * + * {
-    ${({ spacing, theme, horizontal }: { spacing?: keyof ThemeSpacing | number; theme: Theme; horizontal?: boolean }) => {
-      if (typeof spacing === 'number') {
-        return horizontal 
-          ? `margin-left: ${spacing}rem`
-          : `margin-top: ${spacing}rem`;
-      }
-      if (spacing) {
-        return horizontal
-          ? `margin-left: ${theme.spacing[spacing]}px`
-          : `margin-top: ${theme.spacing[spacing]}px`;
-      }
-      return horizontal
-        ? `margin-left: ${theme.spacing.sm}px`
-        : `margin-top: ${theme.spacing.sm}px`;
-    }}
-  }
-
-  ${({ sx, theme }) => sx && typeof sx === 'function' ? sx({ theme }) : sx}
-`;
-
-List.displayName = 'List';
-ListItem.displayName = 'ListItem';
-
-// Default props
-List.defaultProps = {
-  unstyled: true,
-  horizontal: false,
-  spacing: 'sm'
-};
-
-ListItem.defaultProps = {
-  interactive: true,
-  selected: false
-};
+export const ListItem = createComponent<ListItemProps>({
+  displayName: 'ListItem',
+  tag: 'li',
+  variants: {
+    default: (theme, { selected, interactive }) => ({
+      styles: {
+        ...(interactive && {
+          cursor: 'pointer',
+          transition: 'background-color 0.2s',
+          borderRadius: '0.5rem',
+          '&:hover': {
+            backgroundColor: theme.colors.background.accent,
+          },
+        }),
+        ...(selected && {
+          backgroundColor: theme.colors.background.accent,
+        }),
+      },
+    }),
+  },
+  defaultProps: {
+    variants: ['default'],
+    interactive: true,
+    selected: false,
+  },
+});

@@ -18,7 +18,6 @@ export class AudioEngine {
     try {
       dbg.audio(`Loading track ${trackId}`);
       
-      // Clean up existing instance if any
       this.unloadTrack(trackId);
 
       const blob = new Blob([audioBuffer], { type: 'audio/mp3' });
@@ -110,19 +109,27 @@ export class AudioEngine {
   private updatePlaybackState(trackId: string): void {
     this.cancelUpdatePlaybackState(trackId);
     const howl = this.audioInstances.get(trackId);
+    const isSeeking = this.seekingStates.get(trackId);
 
-    if (howl && howl.playing()) {
-      // Only update if not seeking
-      if (!this.seekingStates.get(trackId)) {
+    if (howl && howl.playing() && !isSeeking) {
+      const currentTime = howl.seek() as number;
+      const state = this.store.getState().audio.playerStates[trackId];
+      
+      // Only update if the time difference is significant and not seeking
+      if (Math.abs(currentTime - state.currentTime) > 0.01) {
         this.store.dispatch(updatePlayerState({
           trackId,
           updates: {
-            currentTime: howl.seek() as number,
+            currentTime,
             isPlaying: true,
           },
         }));
       }
 
+      const frameId = requestAnimationFrame(() => this.updatePlaybackState(trackId));
+      this.updateFrameIds.set(trackId, frameId);
+    } else if (!isSeeking) {
+      // If not playing and not seeking, schedule next frame
       const frameId = requestAnimationFrame(() => this.updatePlaybackState(trackId));
       this.updateFrameIds.set(trackId, frameId);
     }
@@ -179,21 +186,39 @@ export class AudioEngine {
     const state = this.store.getState().audio.playerStates[trackId];
     
     if (howl && state.isLoaded) {
-      this.seekingStates.set(trackId, true); // Set seeking state
-      
-      // Update the state immediately to show the new position
+      // Immediately mark as seeking and update UI to target position
+      this.seekingStates.set(trackId, true);
       this.store.dispatch(updatePlayerState({
         trackId,
         updates: { currentTime: time },
       }));
 
-      // Perform the seek
-      howl.seek(time);
+      const fadeDuration = 150;
+      const currentVolume = state.volume;
+      
+      // Cancel any existing playback updates
+      this.cancelUpdatePlaybackState(trackId);
 
-      // Clear seeking state after a short delay
+      // Fade out
+      howl.fade(currentVolume, 0, fadeDuration);
+
       setTimeout(() => {
-        this.seekingStates.set(trackId, false);
-      }, 100); // Small delay to ensure the seek completes
+        // Perform the seek
+        howl.seek(time);
+        
+        // Fade back in
+        howl.fade(0, currentVolume, fadeDuration);
+
+        // Wait for fade-in to complete before resuming updates
+        setTimeout(() => {
+          this.seekingStates.set(trackId, false);
+          
+          // Only restart playback updates if the track is still playing
+          if (howl.playing()) {
+            this.updatePlaybackState(trackId);
+          }
+        }, fadeDuration + 50); // Add small buffer
+      }, fadeDuration * 1.1);
     }
   }
 

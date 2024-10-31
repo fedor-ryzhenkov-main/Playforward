@@ -1,52 +1,23 @@
-import styled from 'styled-components';
-import shouldForwardProp from '@styled-system/should-forward-prop';
+import { space, layout, color, flexbox, border, position, shadow, compose, ShadowProps, BorderProps, FlexboxProps, ColorProps, LayoutProps, SpaceProps, PositionProps } from 'styled-system';
+import { createComponent } from '../../utils/createComponent';
 import { SxProps } from '../../types/sx';
+import { commonModifiers } from '../../types/modifiers';
 
-import {
-  space,
-  layout,
-  color,
-  flexbox,
-  border,
-  position,
-  shadow,
-  compose,
+export interface BoxProps extends 
   SpaceProps,
   LayoutProps,
   ColorProps,
   FlexboxProps,
   BorderProps,
   PositionProps,
-  ShadowProps,
-} from 'styled-system';
-
-export interface BoxProps
-  extends SpaceProps,
-    LayoutProps,
-    ColorProps,
-    FlexboxProps,
-    BorderProps,
-    PositionProps,
-    ShadowProps {
-  as?: keyof JSX.IntrinsicElements;
+  ShadowProps {
   sx?: SxProps;
+  as?: keyof JSX.IntrinsicElements;
 }
 
-const boxStyles = compose(
-  space,
-  layout,
-  color,
-  flexbox,
-  border,
-  position,
-  shadow
-);
-
-export const Box = styled('div').withConfig({
-  shouldForwardProp: (prop) => shouldForwardProp(prop) && prop !== 'sx',
-})<BoxProps>`
-  ${boxStyles}
-  ${({ sx, theme }) => sx && (typeof sx === 'function' ? sx({ theme }) : sx)}
-`;
-
-Box.displayName = 'Box';
+export const Box = createComponent<BoxProps>({
+  displayName: 'Box',
+  tag: 'div',
+  systemProps: [space, layout, color, flexbox, border, position, shadow],
+  modifiers: commonModifiers,
+});

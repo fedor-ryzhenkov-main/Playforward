@@ -1,18 +1,27 @@
-import styled from 'styled-components';
-import { Box, BoxProps } from './Box';
-import { ThemeSpacing } from 'design-system/types/types';
+import { createComponent } from '../../utils/createComponent';
+import { BoxProps } from './Box';
+import { ThemeSpacing } from '../../types/types';
 
-export interface FlexProps extends BoxProps {
+interface FlexProps extends BoxProps {
   gap?: keyof ThemeSpacing | number;
 }
 
-export const Flex = styled(Box)<FlexProps>`
-  display: flex;
-  gap: ${({ gap, theme }) => {
-    if (typeof gap === 'number') return `${gap * theme.spacing.xs}px`;
-    if (gap) return `${theme.spacing[gap]}px`;
-    return undefined;
-  }};
-`;
-
-Flex.displayName = 'Flex';
+export const Flex = createComponent<FlexProps>({
+  displayName: 'Flex',
+  tag: 'div',
+  variants: {
+    default: (theme, { gap }) => ({
+      styles: {
+        display: 'flex',
+        gap: gap 
+          ? typeof gap === 'number'
+            ? `${gap * theme.spacing.xs}px`
+            : `${theme.spacing[gap as keyof ThemeSpacing]}px`
+          : undefined,
+      },
+    }),
+  },
+  defaultProps: {
+    variants: ['default'],
+  },
+});

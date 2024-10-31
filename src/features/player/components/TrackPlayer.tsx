@@ -2,7 +2,7 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from 'store';
-import { getAudioEngine } from 'store/audioMiddleware';
+import { getAudioEngine } from 'store/audio/audioMiddleware';
 
 interface TrackPlayerProps {
   trackId: string;
