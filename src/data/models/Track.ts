@@ -1,9 +1,9 @@
-import { TrackRepository } from 'data/TrackRepository';
+import { Repository } from 'data/Repository';
 
 /**
  * Represents the serializable properties of a Track
  */
-export interface TrackMetadata {
+export interface TrackMetadata { 
   id: string;
   name: string;
   tags: string[];
@@ -24,7 +24,7 @@ export interface SerializedTrack extends TrackMetadata {
  */
 export class Track {
   private _audio: Promise<ArrayBuffer> | null = null;
-  private static repository = TrackRepository.getInstance();
+  private static repository = Repository.getInstance();
 
   private constructor(
     private readonly metadata: TrackMetadata,

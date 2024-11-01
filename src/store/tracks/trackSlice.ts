@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { TrackMetadata } from 'data/Track';
+import { TrackMetadata } from 'data/models/Track';
 import { loadTracksAsync } from 'store/tracks/trackThunks';
 
 interface TrackState {
@@ -67,7 +67,17 @@ const trackSlice = createSlice({
         track.description = action.payload.description;
       }
     },
-    // Additional track-related reducers can be added here
+    /**
+     * Updates the tags of a track.
+     * @param state - The current state.
+     * @param action - The action payload containing the track ID and new tags.
+     */
+    updateTags(state, action: PayloadAction<{ id: string; tags: string[] }>) {
+      const track = state.trackList.find(t => t.id === action.payload.id);
+      if (track) {
+        track.tags = action.payload.tags;
+      }
+    },
   },
   extraReducers: builder => {
     builder
@@ -85,5 +95,5 @@ const trackSlice = createSlice({
   },
 });
 
-export const { setTracks, addTrack, renameTrack, removeTrack, updateDescription } = trackSlice.actions;
+export const { setTracks, addTrack, renameTrack, removeTrack, updateDescription, updateTags } = trackSlice.actions;
 export default trackSlice.reducer;

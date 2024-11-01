@@ -1,5 +1,5 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import { Track } from 'data/Track';
+import { Track } from 'data/models/Track';
 import { RootState } from 'store';
 import { addActiveTrack } from './audioSlice';
 import { dbg } from 'utils/debug';

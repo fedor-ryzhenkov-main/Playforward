@@ -1,7 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import tracksReducer from './tracks/trackSlice';
 import audioReducer from './audio/audioSlice';
-import contextMenuReducer from './contextMenuSlice';
 import { audioMiddleware, initializeAudioEngine } from './audio/audioMiddleware';
 
 /**
@@ -11,7 +10,6 @@ const store = configureStore({
   reducer: {
     tracks: tracksReducer,
     audio: audioReducer,
-    contextMenu: contextMenuReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().prepend(audioMiddleware.middleware),

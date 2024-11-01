@@ -1,5 +1,5 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import { SerializedTrack } from './Track';
+import { SerializedTrack } from './models/Track';
 
 interface MusicLibraryDB extends DBSchema {
   tracks: {

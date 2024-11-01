@@ -1,7 +1,7 @@
 import { createListenerMiddleware } from '@reduxjs/toolkit';
 import { AudioEngine } from './audioEngine';
 import { addActiveTrack, removeActiveTrack } from './audioSlice';
-import { Track } from 'data/Track';
+import { Track } from 'data/models/Track';
 import { RootState } from 'store';
 
 // Create middleware first

@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import store from 'store';
 import Welcome from 'features/pages/Welcome';
-import Player from 'features/pages/Player';
+import Player from 'features/pages/Playforward';
 import Settings from 'features/pages/Settings';
 
 const App: React.FC = () => {

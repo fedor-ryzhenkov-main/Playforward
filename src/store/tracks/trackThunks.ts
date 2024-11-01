@@ -1,7 +1,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import { Track } from 'data/Track';
-import { TrackRepository } from 'data/TrackRepository';
-import { setTracks, addTrack, renameTrack, removeTrack, updateDescription } from 'store/tracks/trackSlice';
+import { Track } from 'data/models/Track';
+import { Repository } from 'data/Repository';
+import { setTracks, addTrack, renameTrack, removeTrack, updateDescription, updateTags } from 'store/tracks/trackSlice';
 import { dbg } from 'utils/debug';
 
 export const loadTracksAsync = createAsyncThunk(
@@ -9,7 +9,7 @@ export const loadTracksAsync = createAsyncThunk(
   async (_, { dispatch }) => {
     try {
       dbg.store('Loading tracks from repository...');
-      const repository = TrackRepository.getInstance();
+      const repository = Repository.getInstance();
       const tracks = await repository.getAll();
       const serializedTracks = tracks.map(track => track.serialize());
       
@@ -26,7 +26,17 @@ export const loadTracksAsync = createAsyncThunk(
 
 export const uploadTrackAsync = createAsyncThunk(
   'tracks/uploadTrack',
-  async (file: File, { dispatch }) => {
+  async ({ 
+    file, 
+    name, 
+    description, 
+    tags 
+  }: { 
+    file: File; 
+    name: string; 
+    description: string; 
+    tags: string[] 
+  }, { dispatch }) => {
     try {
       dbg.store(`Starting upload for file: ${file.name}`);
       
@@ -34,13 +44,13 @@ export const uploadTrackAsync = createAsyncThunk(
       dbg.store(`Created array buffer of size: ${arrayBuffer.byteLength}`);
       
       const track = Track.create(
-        file.name.replace(/\.[^/.]+$/, ''),
-        [],
-        ''
+        name,
+        tags,
+        description
       );
       dbg.store(`Created track instance with ID: ${track.id}`);
 
-      const repository = TrackRepository.getInstance();
+      const repository = Repository.getInstance();
       dbg.store('Saving track to repository...');
       const savedTrack = await repository.save(track, arrayBuffer);
       dbg.store(`Track saved successfully with ID: ${savedTrack.id}`);
@@ -65,7 +75,7 @@ export const renameTrackAsync = createAsyncThunk(
   async ({ id, name }: { id: string; name: string }, { dispatch }) => {
     try {
       dbg.store(`Renaming track ${id} to ${name}`);
-      const repository = TrackRepository.getInstance();
+      const repository = Repository.getInstance();
       const track = await repository.getTrack(id);
       
       if (!track) {
@@ -90,7 +100,7 @@ export const deleteTrackAsync = createAsyncThunk(
   async (id: string, { dispatch }) => {
     try {
       dbg.store(`Deleting track ${id}`);
-      const repository = TrackRepository.getInstance();
+      const repository = Repository.getInstance();
       await repository.delete(id);
       dispatch(removeTrack(id));
       return { success: true };
@@ -106,7 +116,7 @@ export const updateDescriptionAsync = createAsyncThunk(
   async ({ id, description }: { id: string; description: string }, { dispatch }) => {
     try {
       dbg.store(`Updating description for track ${id}`);
-      const repository = TrackRepository.getInstance();
+      const repository = Repository.getInstance();
       const track = await repository.getTrack(id);
       
       if (!track) {
@@ -120,6 +130,30 @@ export const updateDescriptionAsync = createAsyncThunk(
       return { success: true };
     } catch (error) {
       dbg.store(`Failed to update description: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw error;
+    }
+  }
+);
+
+export const updateTagsAsync = createAsyncThunk(
+  'tracks/updateTags',
+  async ({ id, tags }: { id: string; tags: string[] }, { dispatch }) => {
+    try {
+      dbg.store(`Updating tags for track ${id}`);
+      const repository = Repository.getInstance();
+      const track = await repository.getTrack(id);
+      
+      if (!track) {
+        throw new Error(`Track ${id} not found`);
+      }
+
+      track.tags = tags;
+      await repository.save(track);
+      dispatch(updateTags({ id, tags }));
+      
+      return { success: true };
+    } catch (error) {
+      dbg.store(`Failed to update tags: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error;
     }
   }

@@ -1,4 +1,4 @@
-import { Track, SerializedTrack } from 'data/Track';
+import { Track, SerializedTrack } from 'data/models/Track';
 import { getDB } from 'data/Database';
 import { dbg } from 'utils/debug';
 
@@ -18,8 +18,8 @@ interface TrackRecord extends SerializedTrack {
  * Handles the persistence and retrieval of Track entities and their audio data.
  * Implements the singleton pattern to ensure only one instance exists.
  */
-export class TrackRepository {
-  private static instance: TrackRepository | null = null;
+export class Repository {
+  private static instance: Repository | null = null;
 
   private constructor() {}
 
@@ -27,11 +27,11 @@ export class TrackRepository {
    * Gets the singleton instance of TrackRepository.
    * Creates a new instance if one doesn't exist.
    */
-  public static getInstance(): TrackRepository {
-    if (!TrackRepository.instance) {
-      TrackRepository.instance = new TrackRepository();
+  public static getInstance(): Repository {
+    if (!Repository.instance) {
+      Repository.instance = new Repository();
     }
-    return TrackRepository.instance;
+    return Repository.instance;
   }
 
   /**
