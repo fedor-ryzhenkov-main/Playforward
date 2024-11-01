@@ -7,11 +7,13 @@ const Welcome: React.FC = () => {
 
   return (
     <Flex
-      flexDirection="column"
-      justifyContent="center"
-      alignItems="center"
-      height="100vh"
-      bg="background.primary"
+      style={{ 
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        backgroundColor: 'background.primary',
+      }}
     >
       <Box 
         display="flex"

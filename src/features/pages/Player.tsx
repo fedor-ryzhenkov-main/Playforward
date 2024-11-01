@@ -21,7 +21,13 @@ const PlayerComponent: React.FC = () => {
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
-    dispatch(openContextMenu({ x: e.clientX, y: e.clientY }));
+    if (!(e.target as HTMLElement).closest('[data-track-item]')) {
+      dispatch(openContextMenu({ 
+        x: e.clientX, 
+        y: e.clientY,
+        menu: { type: 'default' }
+      }));
+    }
   };
 
   return (
@@ -32,7 +38,7 @@ const PlayerComponent: React.FC = () => {
     >
       <Container>
         <Grid
-          gridTemplateColumns={['1fr', '1fr', '1fr, 1fr']}
+          gridTemplateColumns={['1fr', '1fr', '1fr 1fr']}
           gap={4}
           py={6}
         >

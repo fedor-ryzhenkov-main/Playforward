@@ -37,6 +37,36 @@ const trackSlice = createSlice({
     addTrack(state, action: PayloadAction<TrackMetadata>) {
       state.trackList.push(action.payload);
     },
+    /**
+     * Renames a track.
+     * @param state - The current state.
+     * @param action - The action payload containing the track ID and new name.
+     */
+    renameTrack(state, action: PayloadAction<{ id: string; name: string }>) {
+      const track = state.trackList.find(t => t.id === action.payload.id);
+      if (track) {
+        track.name = action.payload.name;
+      }
+    },
+    /**
+     * Removes a track from the list.
+     * @param state - The current state.
+     * @param action - The action payload containing the track ID.
+     */
+    removeTrack(state, action: PayloadAction<string>) {
+      state.trackList = state.trackList.filter(track => track.id !== action.payload);
+    },
+    /**
+     * Updates the description of a track.
+     * @param state - The current state.
+     * @param action - The action payload containing the track ID and new description.
+     */
+    updateDescription(state, action: PayloadAction<{ id: string; description: string }>) {
+      const track = state.trackList.find(t => t.id === action.payload.id);
+      if (track) {
+        track.description = action.payload.description;
+      }
+    },
     // Additional track-related reducers can be added here
   },
   extraReducers: builder => {
@@ -55,5 +85,5 @@ const trackSlice = createSlice({
   },
 });
 
-export const { setTracks, addTrack } = trackSlice.actions;
+export const { setTracks, addTrack, renameTrack, removeTrack, updateDescription } = trackSlice.actions;
 export default trackSlice.reducer;

@@ -17,6 +17,7 @@ export interface ThemeColors {
   };
   border: string;
   shadow: string;
+  error: string;
 }
 
 export interface ThemeSpacing {

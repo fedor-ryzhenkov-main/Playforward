@@ -128,9 +128,15 @@ export const buttonVariants: VariantMap = {
     styles: {
       borderRadius: '50%',
       padding: 0,
-      display: 'inline-flex',
+      display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
+      aspectRatio: '1 / 1',
+      lineHeight: 1,
+      flexShrink: 0,
+      overflow: 'hidden',
+      whiteSpace: 'nowrap',
+      textOverflow: 'ellipsis',
     },
   }),
 
@@ -188,6 +194,40 @@ export const listVariants: VariantMap = {
   default: (theme) => ({
     styles: {
       listStyle: 'none',
+    },
+  }),
+};
+
+export const inputVariants: VariantMap = {
+  default: (theme) => ({
+    styles: {
+      appearance: 'none',
+      width: '100%',
+      padding: theme.spacing.md,
+      backgroundColor: theme.colors.background.primary,
+      border: `1px solid ${theme.colors.border}`,
+      borderRadius: theme.spacing.md,
+      color: theme.colors.text.primary,
+      fontSize: theme.typography.fontSize.md,
+      transition: 'all 0.2s ease-in-out',
+      '&:focus': {
+        outline: 'none',
+        borderColor: theme.colors.main,
+        boxShadow: `0 0 0 2px ${theme.colors.main}33`,
+      },
+      '&:disabled': {
+        backgroundColor: theme.colors.background.secondary,
+        cursor: 'not-allowed',
+      },
+    },
+  }),
+  error: (theme) => ({
+    styles: {
+      borderColor: theme.colors.error,
+      '&:focus': {
+        borderColor: theme.colors.error,
+        boxShadow: `0 0 0 2px ${theme.colors.error}33`,
+      },
     },
   }),
 };

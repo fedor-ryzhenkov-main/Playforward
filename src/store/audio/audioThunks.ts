@@ -20,6 +20,6 @@ export const createTrackPlayer = createAsyncThunk<void, string, { state: RootSta
 
     const track = Track.fromSerialized({ ...trackMetadata, type: 'Track', version: 1 });
     await track.getAudio();
-    dispatch(addActiveTrack(trackId));
+    dispatch(addActiveTrack({ id: trackId, name: trackMetadata.name }));
   }
 );

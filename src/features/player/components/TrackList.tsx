@@ -5,6 +5,7 @@ import { TrackMetadata } from 'data/Track';
 import { createTrackPlayer } from 'store/audio/audioThunks';
 import { dbg } from 'utils/debug';
 import { AppDispatch } from 'store';
+import { openContextMenu } from 'store/contextMenuSlice';
 
 interface TrackListProps {
   tracks: TrackMetadata[];
@@ -23,6 +24,16 @@ export const TrackList: React.FC<TrackListProps> = ({ tracks }) => {
     }
   };
 
+  const handleContextMenu = (e: React.MouseEvent, trackId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dispatch(openContextMenu({ 
+      x: e.clientX, 
+      y: e.clientY,
+      menu: { type: 'track', action: 'view', targetId: trackId }
+    }));
+  };
+
   return (
     <List spacing="md">
       {tracks.map(track => (
@@ -30,6 +41,7 @@ export const TrackList: React.FC<TrackListProps> = ({ tracks }) => {
           key={track.id}
           interactive
           onClick={() => handleTrackClick(track.id)}
+          onContextMenu={(e) => handleContextMenu(e, track.id)}
           bg="background.secondary"
           p={3}
           borderRadius="8px"

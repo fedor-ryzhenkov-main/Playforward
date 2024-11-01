@@ -20,5 +20,6 @@ export const darkTheme: Theme = {
     },
     border: '#2C2C2E',
     shadow: 'rgba(0, 0, 0, 0.3)',
+    error: '#FF0000',
   },
 };

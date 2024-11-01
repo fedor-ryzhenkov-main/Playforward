@@ -7,8 +7,6 @@ import { commonModifiers } from '../../types/modifiers';
 interface ButtonProps extends SpaceProps {
   variants?: Array<keyof typeof buttonVariants>;
   sx?: SxProps;
-  color?: string;
-  size?: 'small' | 'medium' | 'large';
 }
 
 export const Button = createComponent<ButtonProps>({

@@ -4,6 +4,7 @@ interface AudioPlayerState {
   activeTrackIds: string[];
   playerStates: {
     [trackId: string]: {
+      name: string;
       isPlaying: boolean;
       currentTime: number;
       duration: number;
@@ -11,6 +12,7 @@ interface AudioPlayerState {
       isLooping: boolean;
       isFadeEffectActive: boolean;
       isLoaded: boolean;
+      previousVolume: number | null;
     };
   };
 }
@@ -24,10 +26,12 @@ const audioSlice = createSlice({
   name: 'audio',
   initialState,
   reducers: {
-    addActiveTrack(state, action: PayloadAction<string>) {
-      if (!state.activeTrackIds.includes(action.payload)) {
-        state.activeTrackIds.push(action.payload);
-        state.playerStates[action.payload] = {
+    addActiveTrack(state, action: PayloadAction<{ id: string; name: string }>) {
+      const { id, name } = action.payload;
+      if (!state.activeTrackIds.includes(id)) {
+        state.activeTrackIds.push(id);
+        state.playerStates[id] = {
+          name,
           isPlaying: false,
           currentTime: 0,
           duration: 0,
@@ -35,6 +39,7 @@ const audioSlice = createSlice({
           isLooping: false,
           isFadeEffectActive: false,
           isLoaded: false,
+          previousVolume: null,
         };
       }
     },
@@ -57,8 +62,17 @@ const audioSlice = createSlice({
         };
       }
     },
+    setVolume(state, action: PayloadAction<{ trackId: string; volume: number }>) {
+      const playerState = state.playerStates[action.payload.trackId];
+      if (playerState) {
+        if (action.payload.volume === 0) {
+          playerState.previousVolume = playerState.volume;
+        }
+        playerState.volume = action.payload.volume;
+      }
+    },
   },
 });
 
-export const { addActiveTrack, removeActiveTrack, updatePlayerState } = audioSlice.actions;
+export const { addActiveTrack, removeActiveTrack, updatePlayerState, setVolume } = audioSlice.actions;
 export default audioSlice.reducer; 

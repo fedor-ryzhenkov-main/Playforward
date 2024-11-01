@@ -21,12 +21,12 @@ audioMiddleware.startListening({
   effect: async (action, listenerApi) => {
     const state = listenerApi.getState() as RootState;
     const trackId = action.payload;
-    const trackMetadata = state.tracks.trackList.find(t => t.id === trackId);
+    const trackMetadata = state.tracks.trackList.find(t => t.id === trackId.id);
 
     if (trackMetadata) {
       const track = Track.fromSerialized(trackMetadata);
       const audio = await track.getAudio();
-      await audioEngine.loadTrack(trackId, audio);
+      await audioEngine.loadTrack(track.id, audio);
     }
   },
 });

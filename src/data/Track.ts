@@ -36,6 +36,10 @@ export class Track {
   get tags(): string[] { return [...this.metadata.tags]; }
   get description(): string | undefined { return this.metadata.description; }
 
+  set name(name: string) { this.metadata.name = name; }
+  set description(description: string | undefined) { this.metadata.description = description; }
+  set tags(tags: string[]) { this.metadata.tags = [...tags]; }
+
   /**
    * Creates a new track instance with a generated ID.
    */

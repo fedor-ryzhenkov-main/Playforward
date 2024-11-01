@@ -5,6 +5,4 @@ export * from './layout/Container';
 export * from './elements/Text';
 export * from './elements/Button'; 
 export * from './layout/List';
-export * from './elements/Badge';
-export * from './elements/Spinner';
-export * from './elements/Alert';
+export * from './elements/Input';
