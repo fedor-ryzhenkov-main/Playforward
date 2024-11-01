@@ -1,26 +1,36 @@
-import { typography, space, layout, TypographyProps, SpaceProps, LayoutProps } from 'styled-system';
-import { createComponent } from '../../utils/createComponent';
-import { inputVariants } from '../../types/variants';
-import { commonModifiers } from '../../types/modifiers';
-import { SxProps } from '../../types/sx';
+import * as React from "react"
+import { cva, type VariantProps } from "class-variance-authority"
+import { cn } from "design-system/utils/cn"
 
-interface InputProps extends 
-  TypographyProps,
-  SpaceProps,
-  LayoutProps,
-  Omit<React.InputHTMLAttributes<HTMLInputElement>, keyof TypographyProps | keyof SpaceProps | keyof LayoutProps> {
-  variants?: Array<keyof typeof inputVariants>;
-  sx?: SxProps;
-  error?: boolean;
-}
+const inputVariants = cva(
+  "flex w-full rounded-md border border-input bg-background-primary px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-text-disabled focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-accent disabled:cursor-not-allowed disabled:opacity-50",
+  {
+    variants: {
+      error: {
+        true: "border-error focus-visible:ring-error",
+      },
+    },
+    defaultVariants: {
+      error: false,
+    },
+  }
+)
 
-export const Input = createComponent<InputProps>({
-  displayName: 'Input',
-  tag: 'input',
-  systemProps: [typography, space, layout],
-  variants: inputVariants,
-  modifiers: commonModifiers,
-  defaultProps: {
-    variants: ['default'],
-  },
-}); 
+export interface InputProps
+  extends React.InputHTMLAttributes<HTMLInputElement>,
+    VariantProps<typeof inputVariants> {}
+
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, error, ...props }, ref) => {
+    return (
+      <input
+        className={cn(inputVariants({ error }), className)}
+        ref={ref}
+        {...props}
+      />
+    )
+  }
+)
+Input.displayName = "Input"
+
+export { Input, inputVariants }

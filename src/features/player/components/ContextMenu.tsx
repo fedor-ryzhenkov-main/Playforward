@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Box, Text, Input } from 'design-system/components';
+import { Menu, MenuItem, Input } from 'design-system/components';
 import { RootState, AppDispatch } from 'store';
 import { closeContextMenu, openContextMenu } from 'store/contextMenuSlice';
 import { uploadTrackAsync, renameTrackAsync, deleteTrackAsync, updateDescriptionAsync } from 'store/tracks/trackThunks';
@@ -140,102 +140,58 @@ export const ContextMenu: React.FC = () => {
 
   return (
     <>
-      <Box
+      <Menu
         ref={menuRef}
-        position="fixed"
-        top={y}
-        left={x}
-        bg="background.secondary"
-        borderRadius="md"
-        boxShadow="md"
-        p={2}
-        zIndex={1000}
-        minWidth="200px"
+        style={{
+          display: isOpen ? 'block' : 'none',
+          position: 'fixed',
+          top: y,
+          left: x,
+          zIndex: 1000,
+        }}
       >
         {menu.type === 'default' && (
-          <Text
-            as="div"
-            variants={['body']}
-            onClick={handleUpload}
-            sx={{
-              cursor: 'pointer',
-              '&:hover': { backgroundColor: 'background.accent' },
-              p: 2,
-            }}
-          >
+          <MenuItem onClick={handleUpload}>
             Upload Track
-          </Text>
+          </MenuItem>
         )}
 
         {menu.type === 'track' && menu.action === 'view' && (
           <>
-            <Text
-              as="div"
-              variants={['body']}
-              onClick={handleRenameClick}
-              sx={{
-                cursor: 'pointer',
-                '&:hover': { backgroundColor: 'background.accent' },
-                p: 2,
-              }}
-            >
+            <MenuItem onClick={handleRenameClick}>
               Rename Track
-            </Text>
-            <Text
-              as="div"
-              variants={['body']}
-              onClick={handleEditDescriptionClick}
-              sx={{
-                cursor: 'pointer',
-                '&:hover': { backgroundColor: 'background.accent' },
-                p: 2,
-              }}
-            >
+            </MenuItem>
+            <MenuItem onClick={handleEditDescriptionClick}>
               Edit Description
-            </Text>
-            <Text
-              as="div"
-              variants={['body']}
+            </MenuItem>
+            <MenuItem 
               onClick={handleDelete}
-              sx={{
-                cursor: 'pointer',
-                '&:hover': { backgroundColor: 'background.accent' },
-                color: 'error.main',
-                p: 2,
-              }}
+              className="text-error-main"
             >
               Delete Track
-            </Text>
+            </MenuItem>
           </>
         )}
 
         {menu.type === 'track' && menu.action === 'rename' && (
-          <form onSubmit={handleRename}>
+          <form onSubmit={handleRename} className="p-2">
             <Input
               ref={renameInputRef}
               defaultValue={track?.name || ''}
-              sx={{
-                width: '100%',
-                p: 2,
-              }}
             />
           </form>
         )}
 
         {menu.type === 'track' && menu.action === 'editDescription' && (
-          <form onSubmit={handleEditDescription}>
+          <form onSubmit={handleEditDescription} className="p-2">
             <Input
               ref={renameInputRef}
               defaultValue={track?.description || ''}
               placeholder="Enter description"
-              sx={{
-                width: '100%',
-                p: 2,
-              }}
             />
           </form>
         )}
-      </Box>
+      </Menu>
       <input
         ref={inputRef}
         type="file"

@@ -1,78 +1,45 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Flex, Text, Button } from 'design-system/components';
+import { Flex, Container, Header, Text, Paragraph, Link, Button } from 'design-system/components';
 
 const Welcome: React.FC = () => {
   const navigate = useNavigate();
 
   return (
     <Flex
-      style={{ 
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        backgroundColor: 'background.primary',
-      }}
+      direction="column"
+      align="center"
+      justify="center"
+      className="min-h-screen bg-background-primary"
     >
-      <Box 
-        display="flex"
-        flexDirection="column"
-        alignItems="center"
-        maxWidth="400px"
-        width="100%"
-        p={6}
-      >
-        <Text
-          as="h1"
-          variants={['title']}
-          mb={2}
-          color="text.primary"
-        >
+      <Container size="sm" className="text-center">
+        <Header level={1} className="mb-2">
           Playforward
-        </Text>
+        </Header>
         
-        <Text
-          color="text.secondary"
-          mb={4}
-        >
+        <Paragraph className="mb-4 text-text-secondary">
           A tiny music player for TTRPGs
-        </Text>
+        </Paragraph>
 
-        <Flex
-          gap={2}
-          width="100%"
-          mb={4}
-          justifyContent="center"
-          alignItems="center"
-        >
-          <Button
-            variants={['primary', 'medium']}
-            onClick={() => navigate('/player')}
-          >
+        <Flex gap="sm" justify="center" className="mb-4">
+          <Button variant="primary" size="md" onClick={() => navigate('/player')}>
             Launch
           </Button>
           
-          <Button
-            variants={['primary', 'medium']}
-            onClick={() => navigate('/settings')}
-          >
+          <Button variant="primary" size="md" onClick={() => navigate('/settings')}>
             Settings
           </Button>
         </Flex>
-      </Box>
+      </Container>
 
-      <Box mt="auto" p={4}>
-        <Text color="text.secondary" fontSize="sm">
+      <Container className="mt-auto p-4 text-center">
+        <Text className="text-text-secondary">
           Created by{' '}
-          <Text
-            variants={['link']}
-            href="https://inner-space.fedor-ryzhenkov.com"
-          >
+          <Link href="https://inner-space.fedor-ryzhenkov.com" external>
             Fedor Ryzhenkov
-          </Text>
+          </Link>
         </Text>
-      </Box>
+      </Container>
     </Flex>
   );
 };
