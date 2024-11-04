@@ -1,0 +1,35 @@
+name: playforward
+services:
+  - name: playforward-server
+    git:
+      branch: main
+      repo_clone_url: ${REPO_URL}
+    source_dir: server
+    build_command: npm install
+    run_command: npm run postinstall && npm start
+    http_port: 3001
+    instance_size_slug: basic-xs
+    envs:
+      - key: CLIENT_URL
+        value: ${APP_URL}
+      - key: PORT
+        value: "3001"
+      - key: NODE_ENV
+        value: "production"
+
+static_sites:
+  - name: playforward-client
+    git:
+      branch: main
+      repo_clone_url: ${REPO_URL}
+    source_dir: client
+    build_command: npm install && npm run build
+    output_dir: build
+    environment_slug: node-js
+    envs:
+      - key: REACT_APP_API_URL
+        value: ${_self.HOSTNAME}
+      - key: NODE_ENV
+        value: "production"
+      - key: CI
+        value: "false"

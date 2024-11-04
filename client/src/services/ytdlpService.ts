@@ -4,7 +4,7 @@
 import { dbg } from '@utils/debug';
 
 export class YtDlpService {
-  private static readonly API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  private static readonly API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
   /**
    * Initiates a video download using yt-dlp
