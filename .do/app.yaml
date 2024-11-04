@@ -36,6 +36,14 @@ services:
   instance_size_slug: basic-xs
   name: playforward-server
   source_dir: server
+  dockerfile_path: server/Dockerfile
+  health_check:
+    http_path: /api/health
+    initial_delay_seconds: 30
+    period_seconds: 60
+    timeout_seconds: 10
+    success_threshold: 1
+    failure_threshold: 3
 static_sites:
 - catchall_document: index.html
   environment_slug: node-js
