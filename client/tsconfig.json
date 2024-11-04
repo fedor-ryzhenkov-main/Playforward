@@ -33,9 +33,13 @@
       "@services/*": ["services/*"],
       "@utils/*": ["utils/*"],
       "@features/*": ["features/*"],
-      "@design-system/*": ["design-system/*"]
+      "@design-system/*": ["design-system/*"],
+      "*": ["./node_modules/@types/*", "*"]
     }
   },
-  "include": ["src/**/*"],
+  "include": [
+    "src",
+    "src/types"
+  ],
   "exclude": ["node_modules", "build", "dist"]
 }
