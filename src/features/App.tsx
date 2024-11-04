@@ -5,10 +5,12 @@ import store from 'store';
 import Welcome from 'features/pages/Welcome';
 import Player from 'features/pages/Playforward';
 import Settings from 'features/pages/Settings';
+import { ModalManager } from './components/modal/ModalManager';
 
 const App: React.FC = () => {
   return (
     <Provider store={store}>
+      <ModalManager />
       <BrowserRouter>
         <Routes>
           <Route path="/welcome" element={<Welcome />} />

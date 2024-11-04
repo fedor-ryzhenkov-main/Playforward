@@ -1,13 +1,25 @@
 import React from 'react';
 import { Stack, Button } from 'design-system/components';
-import { UploadModal } from 'features/playforward/components/UploadModal/UploadModal';
-import { useModal } from 'hooks/useModal';
+import { useDispatch } from 'react-redux';
+import { openModal } from 'store/modal/modalSlice';
+import { Upload } from 'features/playforward/components/Upload';
 
 /**
  * Side menu component providing access to main application functions
  */
 export const SideMenu: React.FC = () => {
-  const { isOpen, open, close } = useModal();
+  const dispatch = useDispatch();
+
+  const handleUploadClick = () => {
+    dispatch(
+      openModal({
+        type: 'UPLOAD',
+        props: {
+          title: 'Upload Track',
+        },
+      })
+    );
+  };
 
   return (
     <>
@@ -19,7 +31,7 @@ export const SideMenu: React.FC = () => {
           variant="ghost"
           shape="circle"
           size="sm"
-          onClick={open}
+          onClick={handleUploadClick}
           aria-label="Upload Track"
         >
           U
@@ -43,8 +55,6 @@ export const SideMenu: React.FC = () => {
           H
         </Button>
       </Stack>
-
-      <UploadModal isOpen={isOpen} onClose={close} />
     </>
   );
 }; 

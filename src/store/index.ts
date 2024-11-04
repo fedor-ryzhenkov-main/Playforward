@@ -1,6 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit';
 import tracksReducer from './tracks/trackSlice';
 import audioReducer from './audio/audioSlice';
+import modalReducer from './modal/modalSlice';
 import { audioMiddleware, initializeAudioEngine } from './audio/audioMiddleware';
 
 /**
@@ -10,11 +11,12 @@ const store = configureStore({
   reducer: {
     tracks: tracksReducer,
     audio: audioReducer,
+    modal: modalReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().prepend(audioMiddleware.middleware),
   devTools: {
-    name: 'Music Player',
+    name: 'Playforward',
     trace: true,
     traceLimit: 25
   }

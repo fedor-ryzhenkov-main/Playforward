@@ -8,9 +8,9 @@ export class YtDlpService {
      * Initiates a video download using yt-dlp
      * @param url - The YouTube video URL
      * @param format - The desired format (default: 'best')
-     * @returns Promise with the download result
+     * @returns Promise with the download result as a Blob
      */
-    public static async downloadVideo(url: string, format: string = 'best'): Promise<any> {
+    public static async downloadVideo(url: string, format: string = 'best'): Promise<Blob> {
       try {
         const response = await fetch(`${this.API_URL}/download`, {
           method: 'POST',
@@ -21,10 +21,11 @@ export class YtDlpService {
         });
   
         if (!response.ok) {
-          throw new Error('Download failed');
+          const errorText = await response.text();
+          throw new Error(`Download failed: ${errorText}`);
         }
   
-        return await response.json();
+        return await response.blob();
       } catch (error) {
         console.error('Download error:', error);
         throw error;
