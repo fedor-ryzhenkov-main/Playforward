@@ -6,9 +6,9 @@
     "node": ">=18.x"
   },
   "scripts": {
-    "start": "node server.js",
-    "start:dev": "NODE_ENV=development nodemon server.js",
-    "start:prod": "NODE_ENV=production node server.js"
+    "start": "node src/server.js",
+    "start:dev": "NODE_ENV=development nodemon src/server.js",
+    "start:prod": "NODE_ENV=production node src/server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
