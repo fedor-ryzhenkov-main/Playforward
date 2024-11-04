@@ -1,0 +1,55 @@
+domains:
+- domain: playforward.fedor-ryzhenkov.com
+  type: PRIMARY
+ingress:
+  rules:
+  - component:
+      name: playforward-server
+    match:
+      path:
+        prefix: /api
+  - component:
+      name: playforward-client
+    match:
+      path:
+        prefix: /
+name: playforward
+region: lon
+services:
+- environment_slug: node-js
+  envs:
+  - key: CLIENT_URL
+    scope: RUN_AND_BUILD_TIME
+    value: ${APP_URL}
+  - key: PORT
+    scope: RUN_AND_BUILD_TIME
+    value: "3001"
+  - key: NODE_ENV
+    scope: RUN_AND_BUILD_TIME
+    value: production
+  github:
+    branch: main
+    deploy_on_push: true
+    repo: fedor-ryzhenkov-main/Playforward
+  http_port: 3001
+  instance_count: 1
+  instance_size_slug: basic-xs
+  name: playforward-server
+  source_dir: server
+static_sites:
+- catchall_document: index.html
+  environment_slug: node-js
+  envs:
+  - key: REACT_APP_API_URL
+    scope: BUILD_TIME
+    value: ${APP_URL}/api
+  - key: NODE_ENV
+    scope: BUILD_TIME
+    value: production
+  github:
+    branch: main
+    deploy_on_push: true
+    repo: fedor-ryzhenkov-main/Playforward
+  name: playforward-client
+  output_dir: build
+  source_dir: client
