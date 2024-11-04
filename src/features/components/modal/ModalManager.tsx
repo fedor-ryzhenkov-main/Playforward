@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from 'store';
 import { Modal } from 'design-system/components';
 import { closeModal } from 'store/modal/modalSlice';
-import { Upload } from '../../playforward/components/Upload';
+import { Upload } from 'features/playforward/components/Upload';
 // Import other modals as needed
 
 const MODAL_COMPONENTS: Record<string, React.FC<any>> = {
