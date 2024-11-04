@@ -3,9 +3,9 @@ import { useDispatch, useSelector } from 'react-redux'
 import { AppDispatch, RootState } from 'store'
 import { loadTracksAsync } from 'store/tracks/trackThunks'
 import { dbg } from 'utils/debug'
-import { TrackList } from 'features/Playforward/components/Library'
-import { TrackPlayer } from 'features/Playforward/components/Player'
-import { SideMenu } from 'features/Playforward/components/Menu'
+import { TrackList } from 'features/playforward/components/Library'
+import { TrackPlayer } from 'features/playforward/components/Player'
+import { SideMenu } from 'features/playforward/components/Menu'
 import { Flex } from 'design-system/components'
 
 const PlayerComponent: React.FC = () => {
