@@ -1,0 +1,31 @@
+alerts:
+- rule: DEPLOYMENT_FAILED
+- rule: DOMAIN_FAILED
+domains:
+- domain: playforward.fedor-ryzhenkov.com
+  type: PRIMARY
+name: playforward
+services:
+  - name: client
+    github:
+      repo: fedor-ryzhenkov-main/Playforward
+      branch: main
+      deploy_on_push: true
+    source_dir: client
+    environment_slug: node-js
+    build_command: npm run build
+    run_command: npm start
+    envs:
+      - key: NEXT_PUBLIC_API_URL
+        value: ${server_url}/api
+
+  - name: server
+    github:
+      repo: fedor-ryzhenkov-main/Playforward
+      branch: main
+      deploy_on_push: true
+    source_dir: server
+    dockerfile_path: Dockerfile
+    envs:
+      - key: CLIENT_URL
+        value: ${client_url} 

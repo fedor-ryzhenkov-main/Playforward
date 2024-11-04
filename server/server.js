@@ -5,7 +5,15 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-app.use(cors());
+const PORT = process.env.PORT || 3001;
+const ALLOWED_ORIGINS = [
+  process.env.CLIENT_URL || 'http://localhost:3000',
+  'https://playforward.fedor-ryzhenkov.com'
+];
+
+app.use(cors({
+  origin: ALLOWED_ORIGINS
+}));
 app.use(express.json());
 
 const downloadsDir = path.join(__dirname, 'downloads');
@@ -57,6 +65,6 @@ app.post('/api/download', async (req, res) => {
   }
 });
 
-app.listen(3001, () => {
-  console.log('Server running on port 3001');
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });

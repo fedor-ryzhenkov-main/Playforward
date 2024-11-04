@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from 'features/App';
+import App from './features/App';
 import { enableES5 } from 'immer';
 import debug from 'debug';
 

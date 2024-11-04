@@ -13,7 +13,7 @@ interface TrackListProps {
   tracks: TrackMetadata[];
 }
 
-export const TrackList: React.FC<TrackListProps> = ({ tracks }) => {
+export const Library: React.FC<TrackListProps> = ({ tracks }) => {
   const dispatch = useDispatch<AppDispatch>();
   const [editingTrackId, setEditingTrackId] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<'name' | 'description' | 'tags' | null>(null);

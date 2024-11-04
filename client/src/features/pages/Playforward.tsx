@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { AppDispatch, RootState } from 'store'
 import { loadTracksAsync } from 'store/tracks/trackThunks'
 import { dbg } from 'utils/debug'
-import { TrackList } from 'features/playforward/components/Library'
+import { Library } from 'features/playforward/components/Library'
 import { TrackPlayer } from 'features/playforward/components/Player'
 import { SideMenu } from 'features/playforward/components/Menu'
 import { Flex } from 'design-system/components'
@@ -24,7 +24,7 @@ const PlayerComponent: React.FC = () => {
       
       {/* Track List - increased width from w-80 to w-[32rem] (512px) */}
       <div className="w-[60rem] h-screen overflow-y-auto border-r border-border">
-        <TrackList tracks={tracks} />
+        <Library tracks={tracks} />
       </div>
 
       {/* Active Players - will automatically take remaining space */}
