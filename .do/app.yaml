@@ -1,5 +1,17 @@
 name: playforward
 region: lon
+ingress:
+  rules:
+  - component:
+      name: playforward-server
+    match:
+      path:
+        prefix: /api
+  - component:
+      name: playforward-client
+    match:
+      path:
+        prefix: /
 domains:
   - domain: playforward.fedor-ryzhenkov.com
     type: PRIMARY
@@ -26,7 +38,8 @@ services:
       - key: PORT
         value: "3001"
       - key: NODE_ENV
-        value: "production"0po
+        value: "production"
+
 static_sites:
   - name: playforward-client
     github:

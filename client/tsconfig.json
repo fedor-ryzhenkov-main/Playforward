@@ -20,7 +20,10 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "typeRoots": ["./node_modules/@types", "client/src/types"],
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/types"
+    ],
     "baseUrl": "src",
     "paths": {
       "@/*": ["*"],
