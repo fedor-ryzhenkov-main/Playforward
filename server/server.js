@@ -6,13 +6,10 @@ const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const ALLOWED_ORIGINS = [
-  process.env.CLIENT_URL || 'http://localhost:3000',
-  'https://playforward.fedor-ryzhenkov.com'
-];
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000';
 
 app.use(cors({
-  origin: ALLOWED_ORIGINS
+  origin: CLIENT_URL
 }));
 app.use(express.json());
 

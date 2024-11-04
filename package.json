@@ -1,0 +1,17 @@
+{
+    "name": "playforward",
+    "version": "1.0.0",
+    "private": true,
+    "workspaces": [
+      "client",
+      "server"
+    ],
+    "scripts": {
+      "start": "cd server && npm start",
+      "build": "cd client && npm run build",
+      "dev": "concurrently \"cd client && npm start\" \"cd server && npm run dev\""
+    },
+    "devDependencies": {
+      "concurrently": "^8.0.1"
+    }
+}

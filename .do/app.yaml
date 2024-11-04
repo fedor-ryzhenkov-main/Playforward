@@ -6,26 +6,28 @@ domains:
   type: PRIMARY
 name: playforward
 services:
-  - name: client
+  - name: frontend
     github:
       repo: fedor-ryzhenkov-main/Playforward
       branch: main
       deploy_on_push: true
     source_dir: client
     environment_slug: node-js
-    build_command: npm run build
-    run_command: npm start
+    build_command: npm install && npm run build
+    run_command: npm run start
     envs:
       - key: NEXT_PUBLIC_API_URL
-        value: ${server_url}/api
+        value: https://playforward.fedor-ryzhenkov.com/api
 
-  - name: server
+  - name: backend
     github:
       repo: fedor-ryzhenkov-main/Playforward
       branch: main
       deploy_on_push: true
     source_dir: server
-    dockerfile_path: Dockerfile
+    environment_slug: node-js
+    build_command: npm install
+    run_command: npm start
     envs:
       - key: CLIENT_URL
-        value: ${client_url} 
+        value: https://playforward.fedor-ryzhenkov.com

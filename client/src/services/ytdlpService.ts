@@ -1,6 +1,8 @@
 /**
  * Service for handling YouTube downloads using yt-dlp
  */
+import { dbg } from '@utils/debug';
+
 export class YtDlpService {
   private static readonly API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
