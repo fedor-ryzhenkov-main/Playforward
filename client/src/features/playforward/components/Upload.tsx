@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { Button, Input, Stack, Text, Header } from 'design-system/components';
 import { YtDlpService } from 'services/ytdlpService';
 import { closeModal } from 'store/modal/modalSlice';
 import { uploadTrackAsync } from 'store/tracks/trackThunks';
-import { AppDispatch } from 'store';
+import { AppDispatch, RootState } from 'store';
 import { dbg } from 'utils/debug';
+import { initiateLogin } from 'store/auth/authThunks';
 
 interface UploadProps {
   title?: string;
@@ -19,6 +20,7 @@ interface TrackMetadata {
 
 export const Upload: React.FC<UploadProps> = ({ title }) => {
   const dispatch = useDispatch<AppDispatch>();
+  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
   const [uploadType, setUploadType] = useState<'local' | 'youtube'>('local');
   const [file, setFile] = useState<File | null>(null);
   const [youtubeURL, setYoutubeURL] = useState('');
@@ -73,8 +75,18 @@ export const Upload: React.FC<UploadProps> = ({ title }) => {
           })
         ).unwrap();
       } else if (uploadType === 'youtube' && youtubeURL) {
+        if (!isAuthenticated) {
+          dbg.store('User not authenticated. Initiating login...');
+          dispatch(initiateLogin());
+          return;
+        }
+
         dbg.store('Starting YouTube download...');
         const audioBlob = await YtDlpService.downloadVideo(youtubeURL);
+
+        if (!audioBlob) {
+          throw new Error('Failed to download audio');
+        }
 
         // Convert the downloaded audio to a File object
         const blob = new Blob([audioBlob], { type: 'audio/mpeg' }); // Adjust MIME type as needed
@@ -163,24 +175,15 @@ export const Upload: React.FC<UploadProps> = ({ title }) => {
         />
       </Stack>
 
-      {error && <Text className="text-error">{error}</Text>}
+      {error && <Text color="error">{error}</Text>}
 
-      <Stack direction="horizontal" gap="sm" className="mt-4">
-        <Button
-          variant="primary"
-          onClick={handleUpload}
-          disabled={
-            isUploading ||
-            !metadata.name ||
-            (uploadType === 'local' ? !file : !youtubeURL)
-          }
-        >
-          {isUploading ? 'Uploading...' : 'Upload'}
-        </Button>
-        <Button variant="ghost" onClick={() => dispatch(closeModal())}>
-          Cancel
-        </Button>
-      </Stack>
+      <Button 
+        variant="primary" 
+        onClick={handleUpload} 
+        disabled={isUploading}
+      >
+        {isUploading ? 'Uploading...' : 'Upload'}
+      </Button>
     </Stack>
   );
 };

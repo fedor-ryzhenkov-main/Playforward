@@ -40,7 +40,7 @@ export class YtDlpService {
   public static async downloadVideo(
     url: string, 
     options: DownloadOptions = {}
-  ): Promise<Blob> {
+  ): Promise<Blob | null> {
     const { format = 'bestaudio', onProgress } = options;
 
     // Validate URL
@@ -65,6 +65,11 @@ export class YtDlpService {
       });
 
       clearTimeout(timeoutId);
+
+      if (response.status === 401) {
+        window.location.href = `${this.API_URL}/auth/youtube`;
+        return null;
+      }
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -117,7 +122,9 @@ export class YtDlpService {
    */
   public static async checkServerHealth(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.API_URL}/api/health`);
+      const response = await fetch(`${this.API_URL}/api/health`, {
+        credentials: 'include',
+      });
       const data = await response.json();
       return data.status === 'ok';
     } catch {
