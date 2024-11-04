@@ -1,9 +1,5 @@
 {
     "name": "playforward",
     "version": "1.0.0",
-    "private": true,
-    "workspaces": [
-        "client",
-        "server"
-    ]
-}
+    "private": true
+  }

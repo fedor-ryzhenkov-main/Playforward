@@ -1,13 +1,15 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# node_modules
-client/node_modules
-server/node_modules
-node_modules
+# Dependencies
+/node_modules
+/client/node_modules
+/server/node_modules
 
-# production
-client/build
-server/build
+# Production
+/client/build
+/server/build
 
-# env
-env.private
+# Environment
+.env
+.env.*
+!.env.example
