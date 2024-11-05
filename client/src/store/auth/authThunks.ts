@@ -28,7 +28,7 @@ export const fetchUserProfile = createAsyncThunk(
   async (_, { dispatch }) => {
     dispatch(loginRequest());
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/user`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/user`, {
         credentials: 'include',
       });
 

@@ -54,7 +54,7 @@ export class YtDlpService {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.TIMEOUT);
 
-      const response = await fetch(`${this.API_URL}/api/download`, {
+      const response = await fetch(`${this.API_URL}/download`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -122,7 +122,7 @@ export class YtDlpService {
    */
   public static async checkServerHealth(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.API_URL}/api/health`, {
+      const response = await fetch(`${this.API_URL}/health`, {
         credentials: 'include',
       });
       const data = await response.json();

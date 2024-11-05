@@ -193,11 +193,11 @@ app.get('/auth/logout', (req, res) => {
 // ============================
 
 /**
- * @route POST /api/download
+ * @route POST /download
  * @desc Downloads audio from a YouTube video using yt-dlp with OAuth authorization
  * @access Protected
  */
-app.post('/api/download', ensureAuthenticated, async (req, res) => {
+app.post('/download', ensureAuthenticated, async (req, res) => {
   const { url, format = 'bestaudio' } = req.body;
   let user = req.user;
 
@@ -277,10 +277,10 @@ app.post('/api/download', ensureAuthenticated, async (req, res) => {
 });
 
 /**
- * @route GET /api/health
+ * @route GET /health
  * @desc Health check endpoint
  */
-app.get('/api/health', (req, res) => {
+app.get('/health', (req, res) => {
   res.json({ status: 'ok', environment: process.env.NODE_ENV });
 });
 
