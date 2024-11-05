@@ -52,228 +52,152 @@ app.use(cors({
 app.use(express.json());
 
 // ============================
-// OAuth Configuration
+// Passport Configuration
 // ============================
 
-// Configure Passport with Google OAuth Strategy
 passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID, // Set in .env
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET, // Set in .env
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: "/auth/youtube/callback"
   },
-  function(accessToken, refreshToken, profile, cb) {
-    // Store user tokens securely
-    users[profile.id] = {
-      profile,
-      accessToken,
-      refreshToken
-    };
-    return cb(null, users[profile.id]);
+  function(accessToken, refreshToken, profile, done) {
+    // Here you would typically find or create a user in your database
+    users[profile.id] = { accessToken, refreshToken, profile };
+    return done(null, users[profile.id]);
   }
 ));
 
-// Serialize user for session
-passport.serializeUser((user, cb) => {
-  cb(null, user.profile.id);
+passport.serializeUser(function(user, done) {
+  done(null, user.profile.id);
 });
 
-// Deserialize user from session
-passport.deserializeUser((id, cb) => {
+passport.deserializeUser(function(id, done) {
   const user = users[id];
-  if (user) {
-    cb(null, user);
-  } else {
-    cb(new Error('User not found'), null);
-  }
+  done(null, user);
 });
 
 // ============================
-// Utility Functions
+// Routes Configuration
 // ============================
 
-/**
- * Validates if the provided URL is a valid YouTube URL.
- * @param {string} url - The URL to validate.
- * @returns {boolean} - Returns true if valid, else false.
- */
-const isValidYouTubeUrl = (url) => {
-  try {
-    const urlObj = new URL(url);
-    const validHosts = ['youtube.com', 'youtu.be', 'www.youtube.com'];
-    return validHosts.includes(urlObj.hostname);
-  } catch {
-    return false;
-  }
-};
-
-/**
- * Refreshes the OAuth access token using the refresh token.
- * @param {Object} user - The authenticated user object.
- * @returns {Promise<string>} - Returns the new access token.
- */
-const refreshAccessToken = async (user) => {
-  const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET
-  );
-
-  oauth2Client.setCredentials({
-    refresh_token: user.refreshToken
-  });
-
-  try {
-    const tokens = await oauth2Client.getAccessToken();
-    user.accessToken = tokens.token;
-    // Update the user store with the new access token
-    users[user.profile.id] = user;
-    return tokens.token;
-  } catch (error) {
-    console.error('Error refreshing access token:', error);
-    throw new Error('Failed to refresh access token');
-  }
-};
-
-/**
- * Middleware to ensure the user is authenticated.
- * @param {Object} req - Express request object.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function.
- */
-const ensureAuthenticated = (req, res, next) => {
-  if (req.isAuthenticated()) {
-    return next();
-  }
-  res.status(401).json({ error: 'User not authenticated' });
-};
-
-// ============================
-// OAuth Routes
-// ============================
-
-/**
- * @route GET /auth/youtube
- * @desc Initiates OAuth flow with Google
- */
+// Initiate OAuth login process
 app.get('/auth/youtube',
-  passport.authenticate('google', { scope: ['https://www.googleapis.com/auth/youtube.readonly'], accessType: 'offline', prompt: 'consent' })
+  passport.authenticate('google', { scope: ['profile', 'email'] })
 );
 
-/**
- * @route GET /auth/youtube/callback
- * @desc Handles OAuth callback and redirects user
- */
+// Handle OAuth callback
 app.get('/auth/youtube/callback', 
   passport.authenticate('google', { failureRedirect: '/auth/failure' }),
-  (req, res) => {
-    // Successful authentication, redirect to client application
-    res.redirect(CLIENT_URL);
+  function(req, res) {
+    // Successful authentication, redirect to client.
+    res.redirect(`${CLIENT_URL}/welcome`);
   }
 );
 
-/**
- * @route GET /auth/failure
- * @desc Handles authentication failures
- */
+// Handle authentication failure
 app.get('/auth/failure', (req, res) => {
   res.status(401).json({ error: 'Authentication Failed' });
 });
 
-/**
- * @route GET /auth/logout
- * @desc Logs out the user and destroys the session
- */
-app.get('/auth/logout', (req, res) => {
-  req.logout(() => {
-    res.redirect(CLIENT_URL);
+// Logout route
+app.get('/auth/logout', (req, res, next) => {
+  req.logout(function(err) {
+    if (err) { return next(err); }
+    res.redirect(`${CLIENT_URL}/welcome`);
   });
 });
 
-// ============================
-// API Routes
-// ============================
+/**
+ * Middleware to ensure user is authenticated
+ */
+function ensureAuthenticated(req, res, next) {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.status(401).json({ error: 'Not authenticated' });
+}
 
 /**
- * @route POST /download
- * @desc Downloads audio from a YouTube video using yt-dlp with OAuth authorization
- * @access Protected
+ * @route GET /api/user
+ * @desc Get authenticated user's profile
  */
-app.post('/download', ensureAuthenticated, async (req, res) => {
-  const { url, format = 'bestaudio' } = req.body;
-  let user = req.user;
+app.get('/api/user', (req, res) => {
+  if (req.isAuthenticated() && req.user) {
+    const { profile } = req.user;
+    res.json({
+      id: profile.id,
+      displayName: profile.displayName,
+      email: profile.emails[0].value,
+      // Add other necessary fields
+    });
+  } else {
+    res.status(401).json({ error: 'Not authenticated' });
+  }
+});
 
-  // Input validation
-  if (!url) {
-    return res.status(400).json({ error: 'URL is required' });
+/**
+ * @route POST /api/download
+ * @desc Download video using yt-dlp
+ */
+app.post('/api/download', ensureAuthenticated, async (req, res) => {
+  const { url, format } = req.body;
+  
+  // Basic validation
+  if (!url || typeof url !== 'string') {
+    return res.status(400).json({ error: 'Invalid URL provided' });
   }
 
-  if (!isValidYouTubeUrl(url)) {
-    return res.status(400).json({ error: 'Invalid YouTube URL' });
+  // Define the download format
+  const downloadFormat = format || 'bestaudio';
+  
+  // Create a unique filename based on timestamp
+  const timestamp = Date.now();
+  const outputTemplate = `${timestamp}_%(title)s.%(ext)s`;
+  const downloadsDir = path.join(__dirname, 'downloads');
+  
+  // Ensure downloads directory exists
+  if (!fs.existsSync(downloadsDir)) {
+    fs.mkdirSync(downloadsDir, { recursive: true });
   }
-
-  try {
-    // Refresh access token if necessary
-    await refreshAccessToken(user);
-
-    const outputTemplate = path.join(downloadsDir, '%(title)s.%(ext)s');
-
-    // Prepare extractor arguments with refreshed OAuth token
-    const extractorArgs = `--username=oauth --password="" --extractor-args "youtube:player-client=web,default;oauth_access_token=${user.accessToken}"`;
-
-    const command = `yt-dlp -f ${format} ${extractorArgs} "${url}" -o "${outputTemplate}"`;
-
-    exec(command, { timeout: 300000 }, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Download error: ${error.message}`);
-        return res.status(500).json({ error: 'Download failed', details: error.message });
+  
+  const command = `yt-dlp -f ${downloadFormat} -o "${path.join(downloadsDir, outputTemplate)}" "${url}"`;
+  
+  exec(command, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Error executing yt-dlp: ${error.message}`);
+      return res.status(500).json({ error: 'Yt-dlp execution failed' });
+    }
+    
+    // Parse stdout to find the downloaded file name
+    const lines = stdout.split('\n');
+    let filePath = null;
+    for (let line of lines) {
+      if (line.startsWith('[download] Destination:')) {
+        filePath = line.replace('[download] Destination:', '').trim();
+        break;
       }
-
-      // Find the downloaded file
-      fs.readdir(downloadsDir, (readErr, files) => {
-        if (readErr) {
-          console.error('Error reading downloads directory:', readErr);
-          return res.status(500).json({ error: 'Unable to access downloads directory' });
+    }
+    
+    if (!filePath) {
+      console.error('Downloaded file path not found in yt-dlp output');
+      return res.status(500).json({ error: 'Could not determine downloaded file path' });
+    }
+    
+    // Send the file to the client
+    res.sendFile(filePath, {}, (err) => {
+      if (err) {
+        console.error('Error sending file:', err);
+        return res.status(500).json({ error: 'Error sending file' });
+      }
+      
+      // Clean up: delete the file after sending
+      fs.unlink(filePath, (unlinkErr) => {
+        if (unlinkErr) {
+          console.error('Error deleting file:', unlinkErr);
         }
-
-        if (files.length === 0) {
-          return res.status(500).json({ error: 'No files found after download' });
-        }
-
-        // Assume the last modified file is the downloaded file
-        const sortedFiles = files.map(file => ({
-          name: file,
-          time: fs.statSync(path.join(downloadsDir, file)).mtime.getTime()
-        })).sort((a, b) => b.time - a.time);
-
-        const downloadedFile = sortedFiles[0].name;
-        const filePath = path.join(downloadsDir, downloadedFile);
-
-        // Determine MIME type based on file extension
-        const mimeType = downloadedFile.endsWith('.mp3') ? 'audio/mpeg' : 'application/octet-stream';
-
-        // Set response headers
-        res.setHeader('Content-Type', mimeType);
-        res.setHeader('Content-Disposition', `attachment; filename="${downloadedFile}"`);
-
-        // Send file and clean up
-        res.sendFile(filePath, {}, (err) => {
-          if (err) {
-            console.error('Error sending file:', err);
-            return res.status(500).json({ error: 'Error sending file' });
-          }
-
-          // Clean up: delete the file after sending
-          fs.unlink(filePath, (unlinkErr) => {
-            if (unlinkErr) {
-              console.error('Error deleting file:', unlinkErr);
-            }
-          });
-        });
       });
     });
-  } catch (error) {
-    console.error('Server error:', error);
-    res.status(500).json({ error: 'Internal server error', details: error.message });
-  }
+  });
 });
 
 /**

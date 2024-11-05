@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Button, Input, Stack, Text, Header } from 'design-system/components';
+import { Button, Input, Stack, Text } from 'design-system/components';
 import { YtDlpService } from 'services/ytdlpService';
 import { closeModal } from 'store/modal/modalSlice';
 import { uploadTrackAsync } from 'store/tracks/trackThunks';
@@ -115,65 +115,57 @@ export const Upload: React.FC<UploadProps> = ({ title }) => {
   };
 
   return (
-    <Stack direction="vertical" gap="md" className="p-4">
-      <Header level={2}>{title || 'Upload Track'}</Header>
-
-      <Stack direction="horizontal" gap="sm">
-        <Button
-          variant={uploadType === 'local' ? 'primary' : 'ghost'}
-          onClick={() => setUploadType('local')}
-        >
+    <Stack direction="vertical" gap="md">
+      <div>
+        <label>
+          <input
+            type="radio"
+            value="local"
+            checked={uploadType === 'local'}
+            onChange={() => setUploadType('local')}
+          />
           Local File
-        </Button>
-        <Button
-          variant={uploadType === 'youtube' ? 'primary' : 'ghost'}
-          onClick={() => setUploadType('youtube')}
-        >
-          YouTube
-        </Button>
-      </Stack>
+        </label>
+        <label>
+          <input
+            type="radio"
+            value="youtube"
+            checked={uploadType === 'youtube'}
+            onChange={() => setUploadType('youtube')}
+          />
+          YouTube URL
+        </label>
+      </div>
 
-      {uploadType === 'local' && (
-        <Input
-          type="file"
-          accept="audio/*"
-          onChange={handleFileChange}
-          required
-        />
-      )}
-
-      {uploadType === 'youtube' && (
+      {uploadType === 'local' ? (
+        <Input type="file" onChange={handleFileChange} />
+      ) : (
         <Input
           type="url"
-          placeholder="Enter YouTube URL"
           value={youtubeURL}
           onChange={(e) => setYoutubeURL(e.target.value)}
-          required
+          placeholder="Enter YouTube URL"
         />
       )}
 
-      <Stack direction="vertical" gap="sm">
-        <Header level={4}>Track Details</Header>
-        <Input
-          name="name"
-          placeholder="Track name"
-          value={metadata.name}
-          onChange={handleMetadataChange}
-          required
-        />
-        <Input
-          name="description"
-          placeholder="Description"
-          value={metadata.description}
-          onChange={handleMetadataChange}
-        />
-        <Input
-          name="tags"
-          placeholder="Tags (comma-separated)"
-          value={metadata.tags.join(', ')}
-          onChange={handleMetadataChange}
-        />
-      </Stack>
+      <Input
+        name="name"
+        placeholder="Track Name"
+        value={metadata.name}
+        onChange={handleMetadataChange}
+      />
+      <Input
+        name="description"
+        placeholder="Description"
+        value={metadata.description}
+        onChange={handleMetadataChange}
+      />
+      <Input
+        name="tags"
+        placeholder="Tags (comma-separated)"
+        value={metadata.tags.join(', ')}
+        onChange={handleMetadataChange}
+      />
 
       {error && <Text color="error">{error}</Text>}
 

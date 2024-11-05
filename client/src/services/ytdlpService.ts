@@ -11,8 +11,8 @@ interface DownloadOptions {
 export class YtDlpService {
   private static readonly API_URL = process.env.REACT_APP_API_URL || 
     (process.env.NODE_ENV === 'production' 
-      ? window.location.origin 
-      : 'http://localhost:3001');
+      ? window.location.origin + '/server' 
+      : 'http://localhost:3001/server');
 
   private static readonly TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
@@ -54,7 +54,7 @@ export class YtDlpService {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.TIMEOUT);
 
-      const response = await fetch(`${this.API_URL}/download`, {
+      const response = await fetch(`${this.API_URL}/api/download`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -122,7 +122,7 @@ export class YtDlpService {
    */
   public static async checkServerHealth(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.API_URL}/health`, {
+      const response = await fetch(`${this.API_URL}/api/health`, {
         credentials: 'include',
       });
       const data = await response.json();
