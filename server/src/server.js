@@ -10,11 +10,10 @@ const fs = require('fs');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const session = require('express-session');
-const { google } = require('googleapis');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000';
+const CLIENT_URL = process.env.CLIENT_URL || 'https://playforward.fedor-ryzhenkov.com';
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
 // In-memory user store (Use a persistent database in production)
@@ -24,17 +23,22 @@ const users = {};
 // Middleware Configuration
 // ============================
 
+// Trust proxy if behind a reverse proxy (e.g., Heroku, Nginx)
+app.set('trust proxy', 1);
+
 // Configure session middleware
-app.use(session({
+const sessionOptions = {
   secret: process.env.SESSION_SECRET || 'your_secret_key',
   resave: false,
-  saveUninitialized: true,
+  saveUninitialized: false,
   cookie: {
     secure: !isDevelopment, // Use secure cookies in production
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000 // 1 day
   }
-}));
+};
+
+app.use(session(sessionOptions));
 
 // Initialize Passport
 app.use(passport.initialize());
@@ -42,7 +46,7 @@ app.use(passport.session());
 
 // Configure CORS
 app.use(cors({
-  origin: isDevelopment ? ['http://localhost:3000'] : [CLIENT_URL],
+  origin: CLIENT_URL,
   credentials: true,
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
@@ -58,10 +62,12 @@ app.use(express.json());
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "/auth/youtube/callback"
+    callbackURL: `${CLIENT_URL}/server/auth/youtube/callback`,
+    passReqToCallback: true
   },
-  function(accessToken, refreshToken, profile, done) {
+  function(req, accessToken, refreshToken, profile, done) {
     // Here you would typically find or create a user in your database
+    // For simplicity, we're storing users in an in-memory object
     users[profile.id] = { accessToken, refreshToken, profile };
     return done(null, users[profile.id]);
   }
@@ -77,29 +83,37 @@ passport.deserializeUser(function(id, done) {
 });
 
 // ============================
-// Routes Configuration
+// Authentication Routes
 // ============================
 
-// Initiate OAuth login process
+/**
+ * Initiates OAuth login with Google
+ */
 app.get('/auth/youtube',
   passport.authenticate('google', { scope: ['profile', 'email'] })
 );
 
-// Handle OAuth callback
+/**
+ * Handles OAuth callback from Google
+ */
 app.get('/auth/youtube/callback', 
   passport.authenticate('google', { failureRedirect: '/auth/failure' }),
   function(req, res) {
-    // Successful authentication, redirect to client.
+    // Successful authentication, redirect to client application
     res.redirect(`${CLIENT_URL}/welcome`);
   }
 );
 
-// Handle authentication failure
+/**
+ * Authentication failure route
+ */
 app.get('/auth/failure', (req, res) => {
   res.status(401).json({ error: 'Authentication Failed' });
 });
 
-// Logout route
+/**
+ * Logout route
+ */
 app.get('/auth/logout', (req, res, next) => {
   req.logout(function(err) {
     if (err) { return next(err); }
@@ -107,19 +121,13 @@ app.get('/auth/logout', (req, res, next) => {
   });
 });
 
-/**
- * Middleware to ensure user is authenticated
- */
-function ensureAuthenticated(req, res, next) {
-  if (req.isAuthenticated()) {
-    return next();
-  }
-  res.status(401).json({ error: 'Not authenticated' });
-}
+// ============================
+// API Routes
+// ============================
 
 /**
  * @route GET /api/user
- * @desc Get authenticated user's profile
+ * @desc Returns the authenticated user's profile
  */
 app.get('/api/user', (req, res) => {
   if (req.isAuthenticated() && req.user) {
@@ -136,8 +144,18 @@ app.get('/api/user', (req, res) => {
 });
 
 /**
+ * Middleware to ensure the user is authenticated
+ */
+function ensureAuthenticated(req, res, next) {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.status(401).json({ error: 'Not authenticated' });
+}
+
+/**
  * @route POST /api/download
- * @desc Download video using yt-dlp
+ * @desc Downloads a YouTube video using yt-dlp and sends the file to the client
  */
 app.post('/api/download', ensureAuthenticated, async (req, res) => {
   const { url, format } = req.body;
@@ -201,10 +219,10 @@ app.post('/api/download', ensureAuthenticated, async (req, res) => {
 });
 
 /**
- * @route GET /health
+ * @route GET /api/health
  * @desc Health check endpoint
  */
-app.get('/health', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', environment: process.env.NODE_ENV });
 });
 
