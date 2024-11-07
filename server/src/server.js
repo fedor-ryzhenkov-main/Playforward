@@ -62,7 +62,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // Add after other middleware
-app.use('/api', trackRoutes);
+app.use(trackRoutes);
 
 // ============================
 // Passport Configuration
