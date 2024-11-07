@@ -1,19 +1,30 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Provider, useDispatch } from 'react-redux';
-import store, { AppDispatch } from 'store';
+import { Provider, useDispatch, useSelector } from 'react-redux';
+import store, { AppDispatch, RootState } from 'store';
+import { checkAuthStatus } from 'store/auth/authThunks';
 import Welcome from 'features/pages/Welcome';
 import Player from 'features/pages/Playforward';
-import Settings from 'features/pages/Settings';
-import { ModalManager } from './components/modal/ModalManager';
+import Login from 'features/pages/Login';
 import AppHeader from 'features/components/AppHeader';
-import { fetchUserProfile } from 'store/auth/authThunks';
+import { ModalManager } from './components/modal/ModalManager';
+import { Text } from 'design-system/components';
+
+const PrivateRoute: React.FC<{ element: React.ReactElement }> = ({ element }) => {
+  const { isAuthenticated, loading } = useSelector((state: RootState) => state.auth);
+  
+  if (loading) {
+    return <Text>Loading...</Text>;
+  }
+  
+  return isAuthenticated ? element : <Navigate to="/login" replace />;
+};
 
 const AppContent: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
-    dispatch(fetchUserProfile());
+    dispatch(checkAuthStatus());
   }, [dispatch]);
 
   return (
@@ -23,8 +34,8 @@ const AppContent: React.FC = () => {
         <AppHeader />
         <Routes>
           <Route path="/welcome" element={<Welcome />} />
-          <Route path="/player" element={<Player />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/player" element={<PrivateRoute element={<Player />} />} />
           <Route path="*" element={<Navigate to="/welcome" replace />} />
         </Routes>
       </BrowserRouter>

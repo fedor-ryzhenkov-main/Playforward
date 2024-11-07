@@ -2,9 +2,10 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 interface UserProfile {
   id: string;
-  displayName: string;
   email: string;
-  // Add other relevant user fields
+  display_name: string;
+  picture_url: string;
+  created_at: string;
 }
 
 interface AuthState {
@@ -25,17 +26,20 @@ const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    loginRequest(state) {
+    authRequest(state) {
       state.loading = true;
       state.error = null;
     },
-    loginSuccess(state, action: PayloadAction<UserProfile>) {
+    authSuccess(state, action: PayloadAction<UserProfile>) {
       state.loading = false;
       state.isAuthenticated = true;
       state.user = action.payload;
+      state.error = null;
     },
-    loginFailure(state, action: PayloadAction<string>) {
+    authFailure(state, action: PayloadAction<string>) {
       state.loading = false;
+      state.isAuthenticated = false;
+      state.user = null;
       state.error = action.payload;
     },
     logout(state) {
@@ -46,6 +50,11 @@ const authSlice = createSlice({
   },
 });
 
-export const { loginRequest, loginSuccess, loginFailure, logout } = authSlice.actions;
+export const {
+  authRequest,
+  authSuccess,
+  authFailure,
+  logout,
+} = authSlice.actions;
 
-export default authSlice.reducer; 
+export default authSlice.reducer;

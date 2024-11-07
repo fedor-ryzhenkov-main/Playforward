@@ -21,6 +21,12 @@ const stackVariants = cva("flex", {
       end: "items-end",
       stretch: "items-stretch",
     },
+    justify: {
+      start: "justify-start",
+      center: "justify-center",
+      end: "justify-end",
+      stretch: "justify-stretch",
+    },
   },
   defaultVariants: {
     direction: "vertical",

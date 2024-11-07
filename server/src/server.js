@@ -3,32 +3,28 @@ require('dotenv').config({
 });
 
 const express = require('express');
-const { exec } = require('child_process');
-const cors = require('cors');
-const path = require('path');
-const fs = require('fs');
+const session = require('express-session');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const session = require('express-session');
+const cors = require('cors');
+
+const { findOrCreateGoogleUser, findUserById } = require('./models/userModel');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 const CLIENT_URL = process.env.CLIENT_URL || 'https://playforward.fedor-ryzhenkov.com';
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
-// In-memory user store (Use a persistent database in production)
-const users = {};
-
 // ============================
 // Middleware Configuration
 // ============================
 
-// Trust proxy if behind a reverse proxy (e.g., Heroku, Nginx)
+// Trust proxy if behind a reverse proxy (e.g., Nginx)
 app.set('trust proxy', 1);
 
 // Configure session middleware
-const sessionOptions = {
-  secret: process.env.SESSION_SECRET || 'your_secret_key',
+app.use(session({
+  secret: process.env.SESSION_SECRET || '0000',
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -36,13 +32,7 @@ const sessionOptions = {
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000 // 1 day
   }
-};
-
-app.use(session(sessionOptions));
-
-// Initialize Passport
-app.use(passport.initialize());
-app.use(passport.session());
+}));
 
 // Configure CORS
 app.use(cors({
@@ -55,31 +45,47 @@ app.use(cors({
 // Parse JSON bodies
 app.use(express.json());
 
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
+
 // ============================
 // Passport Configuration
 // ============================
 
+// Google OAuth Strategy
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: `${CLIENT_URL}/server/auth/youtube/callback`,
+    callbackURL: `${process.env.API_URL}/auth/google/callback`,
     passReqToCallback: true
   },
-  function(req, accessToken, refreshToken, profile, done) {
-    // Here you would typically find or create a user in your database
-    // For simplicity, we're storing users in an in-memory object
-    users[profile.id] = { accessToken, refreshToken, profile };
-    return done(null, users[profile.id]);
+  async function(req, accessToken, refreshToken, profile, done) {
+    try {
+      const user = await findOrCreateGoogleUser(profile);
+      return done(null, user);
+    } catch (error) {
+      return done(error);
+    }
   }
 ));
 
-passport.serializeUser(function(user, done) {
-  done(null, user.profile.id);
+// Serialize User
+passport.serializeUser((user, done) => {
+  done(null, user.id);
 });
 
-passport.deserializeUser(function(id, done) {
-  const user = users[id];
-  done(null, user);
+// Deserialize User
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await findUserById(id);
+    if (!user) {
+      return done(new Error('User not found'));
+    }
+    done(null, user);
+  } catch (err) {
+    done(err);
+  }
 });
 
 // ============================
@@ -87,56 +93,39 @@ passport.deserializeUser(function(id, done) {
 // ============================
 
 /**
- * Initiates OAuth login with Google
+ * @route GET /auth/google
+ * @desc Initiates Google OAuth flow
  */
-app.get('/auth/youtube',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
+app.get('/auth/google',
+  passport.authenticate('google', { 
+    scope: ['profile', 'email'],
+    prompt: 'select_account'
+  })
 );
 
 /**
- * Handles OAuth callback from Google
+ * @route GET /auth/google/callback
+ * @desc Handles the Google OAuth callback
  */
-app.get('/auth/youtube/callback', 
-  passport.authenticate('google', { failureRedirect: '/auth/failure' }),
-  function(req, res) {
-    // Successful authentication, redirect to client application
-    res.redirect(`${CLIENT_URL}/welcome`);
-  }
+app.get('/auth/google/callback',
+  passport.authenticate('google', { 
+    failureRedirect: `${CLIENT_URL}/login?error=auth_failed`,
+    successRedirect: `${CLIENT_URL}/player`
+  })
 );
 
 /**
- * Authentication failure route
- */
-app.get('/auth/failure', (req, res) => {
-  res.status(401).json({ error: 'Authentication Failed' });
-});
-
-/**
- * Logout route
- */
-app.get('/auth/logout', (req, res, next) => {
-  req.logout(function(err) {
-    if (err) { return next(err); }
-    res.redirect(`${CLIENT_URL}/welcome`);
-  });
-});
-
-// ============================
-// API Routes
-// ============================
-
-/**
- * @route GET /api/user
+ * @route GET /auth/user
  * @desc Returns the authenticated user's profile
  */
-app.get('/api/user', (req, res) => {
-  if (req.isAuthenticated() && req.user) {
-    const { profile } = req.user;
+app.get('/auth/user', (req, res) => {
+  if (req.isAuthenticated()) {
+    const { id, email, display_name, picture_url } = req.user;
     res.json({
-      id: profile.id,
-      displayName: profile.displayName,
-      email: profile.emails[0].value,
-      // Add other necessary fields
+      id,
+      email,
+      displayName: display_name,
+      pictureUrl: picture_url
     });
   } else {
     res.status(401).json({ error: 'Not authenticated' });
@@ -144,77 +133,15 @@ app.get('/api/user', (req, res) => {
 });
 
 /**
- * Middleware to ensure the user is authenticated
+ * @route POST /auth/logout
+ * @desc Logs out the current user
  */
-function ensureAuthenticated(req, res, next) {
-  if (req.isAuthenticated()) {
-    return next();
-  }
-  res.status(401).json({ error: 'Not authenticated' });
-}
-
-/**
- * @route POST /api/download
- * @desc Downloads a YouTube video using yt-dlp and sends the file to the client
- */
-app.post('/api/download', ensureAuthenticated, async (req, res) => {
-  const { url, format } = req.body;
-  
-  // Basic validation
-  if (!url || typeof url !== 'string') {
-    return res.status(400).json({ error: 'Invalid URL provided' });
-  }
-
-  // Define the download format
-  const downloadFormat = format || 'bestaudio';
-  
-  // Create a unique filename based on timestamp
-  const timestamp = Date.now();
-  const outputTemplate = `${timestamp}_%(title)s.%(ext)s`;
-  const downloadsDir = path.join(__dirname, 'downloads');
-  
-  // Ensure downloads directory exists
-  if (!fs.existsSync(downloadsDir)) {
-    fs.mkdirSync(downloadsDir, { recursive: true });
-  }
-  
-  const command = `yt-dlp -f ${downloadFormat} -o "${path.join(downloadsDir, outputTemplate)}" "${url}"`;
-  
-  exec(command, (error, stdout, stderr) => {
-    if (error) {
-      console.error(`Error executing yt-dlp: ${error.message}`);
-      return res.status(500).json({ error: 'Yt-dlp execution failed' });
+app.post('/auth/logout', (req, res) => {
+  req.logout(function(err) {
+    if (err) { 
+      return res.status(500).json({ error: 'Logout failed.' });
     }
-    
-    // Parse stdout to find the downloaded file name
-    const lines = stdout.split('\n');
-    let filePath = null;
-    for (let line of lines) {
-      if (line.startsWith('[download] Destination:')) {
-        filePath = line.replace('[download] Destination:', '').trim();
-        break;
-      }
-    }
-    
-    if (!filePath) {
-      console.error('Downloaded file path not found in yt-dlp output');
-      return res.status(500).json({ error: 'Could not determine downloaded file path' });
-    }
-    
-    // Send the file to the client
-    res.sendFile(filePath, {}, (err) => {
-      if (err) {
-        console.error('Error sending file:', err);
-        return res.status(500).json({ error: 'Error sending file' });
-      }
-      
-      // Clean up: delete the file after sending
-      fs.unlink(filePath, (unlinkErr) => {
-        if (unlinkErr) {
-          console.error('Error deleting file:', unlinkErr);
-        }
-      });
-    });
+    res.json({ message: 'Logged out successfully.' });
   });
 });
 
@@ -239,13 +166,7 @@ app.use((err, req, res, next) => {
 // Server Initialization
 // ============================
 
-// Configure downloads directory
-const downloadsDir = path.join(__dirname, 'downloads');
-if (!fs.existsSync(downloadsDir)) {
-  fs.mkdirSync(downloadsDir, { recursive: true });
-}
-
 app.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-  console.log(`Accepting requests from: ${isDevelopment ? 'http://localhost:3000' : CLIENT_URL}`);
+  console.log(`Accepting requests from: ${CLIENT_URL}`);
 });

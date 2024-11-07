@@ -1,62 +1,52 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import { loginRequest, loginSuccess, loginFailure, logout } from './authSlice';
+import { authRequest, authSuccess, authFailure, logout } from './authSlice';
 
-interface UserProfile {
-  id: string;
-  displayName: string;
-  email: string;
-  // Add other relevant user fields
-}
-
-/**
- * Initiates the OAuth login process by redirecting the user to the backend's OAuth endpoint.
- */
-export const initiateLogin = createAsyncThunk(
-  'auth/initiateLogin',
+export const checkAuthStatus = createAsyncThunk(
+  'auth/checkStatus',
   async (_, { dispatch }) => {
-    dispatch(loginRequest());
-    // Redirect to the backend's OAuth initiation route
-    window.location.href = `${process.env.REACT_APP_API_URL}/auth/youtube`;
-  }
-);
-
-/**
- * Fetches the authenticated user's profile from the backend.
- */
-export const fetchUserProfile = createAsyncThunk(
-  'auth/fetchUserProfile',
-  async (_, { dispatch }) => {
-    dispatch(loginRequest());
+    dispatch(authRequest());
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/user`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/user`, {
         credentials: 'include',
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch user profile');
+        throw new Error('Not authenticated');
       }
 
-      const data: UserProfile = await response.json();
-      dispatch(loginSuccess(data));
+      const userData = await response.json();
+      dispatch(authSuccess(userData));
+      return userData;
     } catch (error: any) {
-      dispatch(loginFailure(error.message));
+      dispatch(authFailure(error.message));
+      throw error;
     }
   }
 );
 
-/**
- * Logs out the user by hitting the backend's logout endpoint.
- */
+export const initiateGoogleLogin = createAsyncThunk(
+  'auth/googleLogin',
+  async (_, { dispatch }) => {
+    window.location.href = `${process.env.REACT_APP_API_URL}/auth/google`;
+  }
+);
+
 export const logoutUser = createAsyncThunk(
-  'auth/logoutUser',
+  'auth/logout',
   async (_, { dispatch }) => {
     try {
-      await fetch(`${process.env.REACT_APP_API_URL}/auth/logout`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/logout`, {
+        method: 'POST',
         credentials: 'include',
       });
+
+      if (!response.ok) {
+        throw new Error('Logout failed');
+      }
+
       dispatch(logout());
     } catch (error: any) {
-      console.error('Logout failed:', error.message);
+      console.error('Logout error:', error);
     }
   }
-); 
+);

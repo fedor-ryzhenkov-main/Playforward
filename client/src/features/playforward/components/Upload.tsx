@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { Button, Input, Stack, Text } from 'design-system/components';
 import { YtDlpService } from 'services/ytdlpService';
 import { closeModal } from 'store/modal/modalSlice';
 import { uploadTrackAsync } from 'store/tracks/trackThunks';
-import { AppDispatch, RootState } from 'store';
+import { AppDispatch } from 'store';
 import { dbg } from 'utils/debug';
-import { initiateLogin } from 'store/auth/authThunks';
 
 interface UploadProps {
   title?: string;
@@ -20,7 +19,6 @@ interface TrackMetadata {
 
 export const Upload: React.FC<UploadProps> = ({ title }) => {
   const dispatch = useDispatch<AppDispatch>();
-  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
   const [uploadType, setUploadType] = useState<'local' | 'youtube'>('local');
   const [file, setFile] = useState<File | null>(null);
   const [youtubeURL, setYoutubeURL] = useState('');
@@ -36,7 +34,6 @@ export const Upload: React.FC<UploadProps> = ({ title }) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       setFile(selectedFile);
-      // Pre-fill name from filename
       setMetadata((prev) => ({
         ...prev,
         name: selectedFile.name.replace(/\.[^/.]+$/, ''),
@@ -49,10 +46,7 @@ export const Upload: React.FC<UploadProps> = ({ title }) => {
     if (name === 'tags') {
       setMetadata((prev) => ({
         ...prev,
-        tags: value
-          .split(',')
-          .map((tag) => tag.trim())
-          .filter((tag) => tag.length > 0),
+        tags: value.split(',').map((tag) => tag.trim()).filter((tag) => tag.length > 0),
       }));
     } else {
       setMetadata((prev) => ({ ...prev, [name]: value }));
@@ -66,21 +60,13 @@ export const Upload: React.FC<UploadProps> = ({ title }) => {
     try {
       if (uploadType === 'local' && file) {
         dbg.store('Starting local file upload...');
-        await dispatch(
-          uploadTrackAsync({
-            file,
-            name: metadata.name,
-            description: metadata.description,
-            tags: metadata.tags,
-          })
-        ).unwrap();
+        await dispatch(uploadTrackAsync({
+          file,
+          name: metadata.name,
+          description: metadata.description,
+          tags: metadata.tags,
+        })).unwrap();
       } else if (uploadType === 'youtube' && youtubeURL) {
-        if (!isAuthenticated) {
-          dbg.store('User not authenticated. Initiating login...');
-          dispatch(initiateLogin());
-          return;
-        }
-
         dbg.store('Starting YouTube download...');
         const audioBlob = await YtDlpService.downloadVideo(youtubeURL);
 
@@ -88,21 +74,18 @@ export const Upload: React.FC<UploadProps> = ({ title }) => {
           throw new Error('Failed to download audio');
         }
 
-        // Convert the downloaded audio to a File object
-        const blob = new Blob([audioBlob], { type: 'audio/mpeg' }); // Adjust MIME type as needed
+        const blob = new Blob([audioBlob], { type: 'audio/mpeg' });
         const youtubeFile = new File([blob], `${metadata.name}.mp3`, {
           type: 'audio/mpeg',
         });
 
         dbg.store('Starting upload of downloaded YouTube audio...');
-        await dispatch(
-          uploadTrackAsync({
-            file: youtubeFile,
-            name: metadata.name,
-            description: metadata.description,
-            tags: metadata.tags,
-          })
-        ).unwrap();
+        await dispatch(uploadTrackAsync({
+          file: youtubeFile,
+          name: metadata.name,
+          description: metadata.description,
+          tags: metadata.tags,
+        })).unwrap();
       }
 
       dispatch(closeModal());
