@@ -17,7 +17,6 @@ const AppHeader: React.FC = () => {
 
   return (
     <Stack direction="horizontal" align="center" justify="center" className="p-4 bg-white shadow">
-      <Header level={1}>Playforward</Header>
       {isAuthenticated && user && (
         <Stack direction="horizontal" gap="md" align="center">
           <Stack direction="horizontal" gap="sm" align="center">
