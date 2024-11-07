@@ -1,11 +1,12 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import { environment } from '../config/environment';
 
 class Api {
   private client: AxiosInstance;
 
   constructor() {
     this.client = axios.create({
-      baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3001/server',
+      baseURL: environment.api.baseUrl,
       withCredentials: true,
       headers: {
         'Content-Type': 'application/json',

@@ -1,32 +1,22 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { authRequest, authSuccess, authFailure, logout } from './authSlice';
+import { environment } from 'config/environment';
+import { api } from 'services/api';
+import { User } from '@common/types/User';
+import { ApiResponse } from '@common/types/Api';
 
 export const checkAuthStatus = createAsyncThunk(
   'auth/checkStatus',
   async (_, { dispatch }) => {
     dispatch(authRequest());
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/user`, {
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        dispatch(authFailure(error.error || 'Authentication failed'));
-        return null;
+      const response = await api.get<ApiResponse<User>>(environment.auth.userProfileUrl);
+      if (response.data && response.data.id) {
+        dispatch(authSuccess(response.data));
+        return response.data;
       }
-
-      const userData = await response.json();
-      if (userData && userData.id) {
-        dispatch(authSuccess(userData));
-        return userData;
-      } else {
-        dispatch(authFailure('Invalid user data received'));
-        return null;
-      }
+      dispatch(authFailure('Invalid user data received'));
+      return null;
     } catch (error: any) {
       dispatch(authFailure(error.message || 'Authentication check failed'));
       return null;
@@ -37,7 +27,7 @@ export const checkAuthStatus = createAsyncThunk(
 export const initiateGoogleLogin = createAsyncThunk(
   'auth/googleLogin',
   async (_, { dispatch }) => {
-    window.location.href = `${process.env.REACT_APP_API_URL}/auth/google`;
+    window.location.href = environment.auth.googleAuthUrl;
   }
 );
 

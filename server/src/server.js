@@ -9,9 +9,11 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const cors = require('cors');
 const pgSession = require('connect-pg-simple')(session);
 const { pool } = require('./db');
+const helmet = require('helmet');
 
 const { findOrCreateGoogleUser, findUserById } = require('./models/userModel');
 const trackRoutes = require('./routes/trackRoutes');
+const authRoutes = require('./routes/authRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -29,7 +31,8 @@ app.set('trust proxy', 1);
 app.use(session({
   store: new pgSession({
     pool,
-    tableName: 'session'
+    tableName: 'session',
+    pruneSessionInterval: 24 * 60 * 60 // 1 day
   }),
   secret: process.env.SESSION_SECRET || '0000',
   resave: false,
@@ -37,8 +40,10 @@ app.use(session({
   cookie: {
     secure: !isDevelopment, // Use secure cookies in production
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 1 day
-  }
+    maxAge: 24 * 60 * 60 * 1000, // 1 day
+    sameSite: 'lax'  // Protect against CSRF
+  },
+  name: 'sid'  // Change session cookie name from default 'connect.sid'
 }));
 
 // Configure CORS
@@ -61,8 +66,9 @@ app.use(express.raw({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Add after other middleware
+// Add routes
 app.use(trackRoutes);
+app.use(authRoutes);
 
 // ============================
 // Passport Configuration
@@ -101,72 +107,6 @@ passport.deserializeUser(async (id, done) => {
   } catch (err) {
     done(err);
   }
-});
-
-// ============================
-// Authentication Routes
-// ============================
-
-/**
- * @route GET /auth/google
- * @desc Initiates Google OAuth flow
- */
-app.get('/auth/google',
-  passport.authenticate('google', { 
-    scope: ['profile', 'email'],
-    prompt: 'select_account'
-  })
-);
-
-/**
- * @route GET /auth/google/callback
- * @desc Handles the Google OAuth callback
- */
-app.get('/auth/google/callback',
-  passport.authenticate('google', { 
-    failureRedirect: `${CLIENT_URL}/login?error=auth_failed`,
-    successRedirect: `${CLIENT_URL}/player`
-  })
-);
-
-/**
- * @route GET /auth/user
- * @desc Returns the authenticated user's profile
- */
-app.get('/auth/user', (req, res) => {
-  if (req.isAuthenticated() && req.user) {
-    const { id, email, display_name, picture_url, created_at } = req.user;
-    res.json({
-      id,
-      email,
-      displayName: display_name,
-      pictureUrl: picture_url,
-      createdAt: created_at
-    });
-  } else {
-    res.status(401).json({ error: 'Not authenticated' });
-  }
-});
-
-/**
- * @route POST /auth/logout
- * @desc Logs out the current user
- */
-app.post('/auth/logout', (req, res) => {
-  req.logout(function(err) {
-    if (err) { 
-      return res.status(500).json({ error: 'Logout failed.' });
-    }
-    res.json({ message: 'Logged out successfully.' });
-  });
-});
-
-/**
- * @route GET /api/health
- * @desc Health check endpoint
- */
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', environment: process.env.NODE_ENV });
 });
 
 // ============================

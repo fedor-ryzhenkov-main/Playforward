@@ -22,7 +22,8 @@
     "jsx": "react-jsx",
     "typeRoots": [
       "./node_modules/@types",
-      "./src/types"
+      "./src/types",
+      "../common/types"
     ],
     "baseUrl": "src",
     "paths": {
@@ -34,12 +35,14 @@
       "@utils/*": ["utils/*"],
       "@features/*": ["features/*"],
       "@design-system/*": ["design-system/*"],
+      "@common/*": ["../../common/*"],
       "*": ["./node_modules/@types/*", "*"]
     }
   },
   "include": [
     "src",
-    "src/types"
+    "src/types",
+    "../common/types"
   ],
   "exclude": ["node_modules", "build", "dist"]
 }

@@ -1,5 +1,5 @@
 const express = require('express');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth } = require('../middleware/authMiddleware');
 const trackModel = require('../models/trackModel');
 const { upload } = require('../middleware/audioMiddleware');
 const router = express.Router();
