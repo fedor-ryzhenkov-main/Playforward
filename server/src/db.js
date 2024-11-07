@@ -2,12 +2,12 @@ const { Pool } = require('pg');
 
 console.log('Initializing database connection...');
 console.log('DATABASE_URL format:', process.env.DATABASE_URL ? 'Present' : 'Missing', process.env.DATABASE_URL);
-console.log('CA_CERT format:', process.env.CA_CERT ? 'Present' : 'Missing', process.env.CA_CERT);
+console.log('CA_CERT format:', process.env.DB_SSL__CA ? 'Present' : 'Missing', process.env.DB_SSL__CA);
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    ca: process.env.CA_CERT,
+    ca: process.env.DB_SSL__CA,
     rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED
   }
 });
