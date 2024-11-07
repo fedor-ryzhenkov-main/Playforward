@@ -1,35 +1,34 @@
 const { Pool } = require('pg');
 
 console.log('Initializing database connection...');
-console.log('DATABASE_URL format:', process.env.DATABASE_URL ? 'Present' : 'Missing', process.env.DATABASE_URL);
-console.log('CA_CERT format:', process.env.DB_SSL__CA ? 'Present' : 'Missing', process.env.DB_SSL__CA);
+console.log('Connection details:', {
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  database: process.env.DB_DATABASE,
+  user: process.env.DB_USER,
+});
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  database: process.env.DB_DATABASE,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
   ssl: {
-    ca: process.env.DB_SSL__CA,
-    rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED
+    ca: process.env.DB_SSL_CA
   }
 });
 
-
+// Add error handling for connection issues
 pool.on('error', (err) => {
-  console.error('Database pool error:', err);
-  console.error('Error code:', err.code);
-  console.error('Error stack:', err.stack);
+  console.error('Unexpected error on idle client', err);
   process.exit(-1);
 });
 
+// Test the connection
 pool.connect((err, client, release) => {
   if (err) {
     console.error('Error acquiring client:', err.stack);
-    console.error('Connection details:', {
-      host: pool.options.host,
-      port: pool.options.port,
-      database: pool.options.database,
-      user: pool.options.user,
-      ssl: pool.options.ssl
-    });
     return;
   }
   client.query('SELECT NOW()', (err, result) => {
@@ -42,12 +41,6 @@ pool.connect((err, client, release) => {
 });
 
 module.exports = {
-  query: (text, params) => {
-    console.log('Executing query:', text);
-    return pool.query(text, params)
-      .catch(err => {
-        console.error('Query error:', err);
-        throw err;
-      });
-  },
+  query: (text, params) => pool.query(text, params),
+  pool 
 }; 
