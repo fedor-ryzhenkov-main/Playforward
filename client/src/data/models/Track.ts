@@ -25,10 +25,11 @@ export interface SerializedTrack extends TrackMetadata {
 export class Track {
   private _audio: Promise<ArrayBuffer> | null = null;
   private static repository = Repository.getInstance();
+  private metadata: TrackMetadata;
 
-  private constructor(
-    private readonly metadata: TrackMetadata,
-  ) {}
+  private constructor(metadata: TrackMetadata) {
+    this.metadata = { ...metadata };  // Create a mutable copy
+  }
 
   // Getters for metadata properties
   get id(): string { return this.metadata.id; }
@@ -122,5 +123,49 @@ export class Track {
    */
   hasAudio(): boolean {
     return this._audio !== null;
+  }
+
+  /**
+   * Updates the track's metadata in the database.
+   * @throws {Error} If update fails
+   */
+  async update(): Promise<void> {
+    const savedTrack = await Track.repository.update(this);
+    this.metadata = { ...savedTrack.metadata };
+  }
+
+  /**
+   * Updates the track's name and saves to database.
+   * @throws {Error} If update fails
+   */
+  async updateName(name: string): Promise<void> {
+    this.name = name;
+    await this.update();
+  }
+
+  /**
+   * Updates the track's tags and saves to database.
+   * @throws {Error} If update fails
+   */
+  async updateTags(tags: string[]): Promise<void> {
+    this.tags = tags;
+    await this.update();
+  }
+
+  /**
+   * Updates the track's description and saves to database.
+   * @throws {Error} If update fails
+   */
+  async updateDescription(description?: string): Promise<void> {
+    this.description = description;
+    await this.update();
+  }
+
+  /**
+   * Deletes the track and its audio data from the database.
+   * @throws {Error} If deletion fails
+   */
+  async delete(): Promise<void> {
+    await Track.repository.delete(this.id);
   }
 }

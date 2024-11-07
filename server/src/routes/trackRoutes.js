@@ -81,6 +81,23 @@ router.get('/tracks/:id', async (req, res) => {
   }
 });
 
+router.delete('/tracks/:id', async (req, res) => {
+  try {
+    await trackModel.deleteTrack(req.params.id, req.user.id);
+    res.json({
+      data: null,
+      status: 200,
+      statusText: 'OK'
+    });
+  } catch (error) {
+    res.status(500).json({
+      data: null,
+      status: 500,
+      statusText: 'Failed to delete track'
+    });
+  }
+});
+
 router.get('/tracks/:id/audio', async (req, res) => {
   try {
     const audio = await trackModel.getTrackAudio(req.params.id, req.user.id);
@@ -97,6 +114,23 @@ router.get('/tracks/:id/audio', async (req, res) => {
       data: null,
       status: 500,
       statusText: 'Failed to fetch audio'
+    });
+  }
+});
+
+router.put('/tracks/:id', async (req, res) => {
+  try {
+    const track = await trackModel.updateTrack(req.params.id, req.user.id, req.body);
+    res.json({
+      data: track,
+      status: 200,
+      statusText: 'OK'
+    });
+  } catch (error) {
+    res.status(500).json({
+      data: null,
+      status: 500,
+      statusText: 'Failed to update track'
     });
   }
 });

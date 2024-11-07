@@ -100,4 +100,14 @@ export class Repository {
     const response = await api.get<ApiResponse<SerializedTrack[]>>('/tracks', { params: { tag } });
     return response.data.map(track => Track.fromSerialized(track));
   }
+
+  async searchByName(name: string): Promise<Track[]> {
+    const response = await api.get<ApiResponse<SerializedTrack[]>>('/tracks', { params: { name } });
+    return response.data.map(track => Track.fromSerialized(track));
+  }
+
+  async update(track: Track): Promise<Track> {
+    const response = await api.put<ApiResponse<SerializedTrack>>(`/tracks/${track.id}`, track.serialize());
+    return Track.fromSerialized(response.data);
+  }
 }

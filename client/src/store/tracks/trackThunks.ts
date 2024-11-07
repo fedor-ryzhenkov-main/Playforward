@@ -82,9 +82,7 @@ export const renameTrackAsync = createAsyncThunk(
         throw new Error(`Track ${id} not found`);
       }
 
-      track.name = name;
-      
-      await repository.save(track);
+      await track.updateName(name);
       dispatch(renameTrack({ id, name }));
       
       return { success: true };
@@ -123,8 +121,7 @@ export const updateDescriptionAsync = createAsyncThunk(
         throw new Error(`Track ${id} not found`);
       }
 
-      track.description = description;
-      await repository.save(track);
+      await track.updateDescription(description);
       dispatch(updateDescription({ id, description }));
       
       return { success: true };
@@ -147,8 +144,7 @@ export const updateTagsAsync = createAsyncThunk(
         throw new Error(`Track ${id} not found`);
       }
 
-      track.tags = tags;
-      await repository.save(track);
+      await track.updateTags(tags);
       dispatch(updateTags({ id, tags }));
       
       return { success: true };

@@ -108,6 +108,27 @@ async function deleteTrack(trackId, userId) {
   };
 }
 
+async function updateTrack(trackId, userId, { name, tags, description }) {
+  const result = await db.query(
+    `UPDATE tracks 
+     SET name = $1, tags = $2, description = $3
+     WHERE id = $4 AND user_id = $5
+     RETURNING *`,
+    [name, tags, description, trackId, userId]
+  );
+  
+  if (!result.rows[0]) return null;
+  
+  return {
+    type: 'Track',
+    version: 1,
+    id: result.rows[0].id,
+    name: result.rows[0].name,
+    tags: result.rows[0].tags || [],
+    description: result.rows[0].description || undefined
+  };
+}
+
 module.exports = {
   createTrack,
   saveAudio,
@@ -115,5 +136,6 @@ module.exports = {
   getTrackAudio,
   getUserTracks,
   searchTracksByTag,
-  deleteTrack
+  deleteTrack,
+  updateTrack
 }; 
