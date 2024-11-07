@@ -40,7 +40,7 @@ export class Repository {
       const blob = new Blob([audio], { type: 'application/octet-stream' });
       formData.append('audio', blob);
 
-      await api.post<ApiResponse<void>>(`/tracks/${track.id}/audio`, formData, {
+      await api.post<void>(`/tracks/${track.id}/audio`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }

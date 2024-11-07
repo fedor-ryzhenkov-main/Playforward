@@ -57,43 +57,27 @@ export class Track {
    * @throws {Error} If the serialized data is invalid or incompatible
    */
   static fromSerialized(data: unknown): Track {
-    // Type guard and validation
     if (!Track.isSerializedTrack(data)) {
       throw new Error('Invalid track data format');
     }
 
-    // Version handling
-    switch (data.version) {
-      case 1:
-        return new Track({
-          id: data.id,
-          name: data.name,
-          tags: data.tags,
-          description: data.description,
-        });
-      default:
-        throw new Error(`Unsupported track data version: ${data.version}`);
-    }
+    const { id, name, tags, description } = data;
+    return new Track({ id, name, tags, description });
   }
 
   /**
    * Type guard for serialized track data
    */
-  private static isSerializedTrack(data: unknown): data is SerializedTrack {
+  private static isSerializedTrack(data: any): data is SerializedTrack {
     return (
-      typeof data === 'object' &&
-      data !== null &&
-      'type' in data &&
+      data &&
       data.type === 'Track' &&
-      'version' in data &&
-      typeof data.version === 'number' &&
-      'id' in data &&
+      data.version === 1 &&
       typeof data.id === 'string' &&
-      'name' in data &&
       typeof data.name === 'string' &&
-      'tags' in data &&
-      Array.isArray((data as any).tags) &&
-      (data as any).tags.every((tag: unknown) => typeof tag === 'string')
+      Array.isArray(data.tags) &&
+      data.tags.every((tag: unknown) => typeof tag === 'string') &&
+      (typeof data.description === 'string' || data.description === undefined)
     );
   }
 

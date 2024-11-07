@@ -5,14 +5,13 @@ class Api {
 
   constructor() {
     this.client = axios.create({
-      baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3001/api',
-      withCredentials: true, // Important for auth cookies
+      baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3001/server',
+      withCredentials: true,
       headers: {
         'Content-Type': 'application/json',
       },
     });
 
-    // Add response interceptor for error handling
     this.client.interceptors.response.use(
       response => response,
       error => {
