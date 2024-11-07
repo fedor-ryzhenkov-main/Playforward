@@ -7,8 +7,11 @@ const session = require('express-session');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const cors = require('cors');
+const pgSession = require('connect-pg-simple')(session);
+const { pool } = require('./db');
 
 const { findOrCreateGoogleUser, findUserById } = require('./models/userModel');
+const trackRoutes = require('./routes/trackRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -24,6 +27,10 @@ app.set('trust proxy', 1);
 
 // Configure session middleware
 app.use(session({
+  store: new pgSession({
+    pool,
+    tableName: 'session'
+  }),
   secret: process.env.SESSION_SECRET || '0000',
   resave: false,
   saveUninitialized: false,
@@ -38,16 +45,24 @@ app.use(session({
 app.use(cors({
   origin: CLIENT_URL,
   credentials: true,
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type']
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Content-Length'],
+  maxAge: 600 // Cache preflight requests for 10 minutes
 }));
 
 // Parse JSON bodies
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.raw({ 
+  type: 'application/octet-stream',
+  limit: '50mb' 
+}));
 
 // Initialize Passport
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Add after other middleware
+app.use('/api', trackRoutes);
 
 // ============================
 // Passport Configuration
@@ -119,13 +134,14 @@ app.get('/auth/google/callback',
  * @desc Returns the authenticated user's profile
  */
 app.get('/auth/user', (req, res) => {
-  if (req.isAuthenticated()) {
-    const { id, email, display_name, picture_url } = req.user;
+  if (req.isAuthenticated() && req.user) {
+    const { id, email, display_name, picture_url, created_at } = req.user;
     res.json({
       id,
       email,
       displayName: display_name,
-      pictureUrl: picture_url
+      pictureUrl: picture_url,
+      createdAt: created_at
     });
   } else {
     res.status(401).json({ error: 'Not authenticated' });

@@ -11,13 +11,20 @@ import { ModalManager } from './components/modal/ModalManager';
 import { Text } from 'design-system/components';
 
 const PrivateRoute: React.FC<{ element: React.ReactElement }> = ({ element }) => {
-  const { isAuthenticated, loading } = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated, loading, user } = useSelector((state: RootState) => state.auth);
+  const dispatch = useDispatch<AppDispatch>();
+
+  useEffect(() => {
+    if (!isAuthenticated && !loading) {
+      dispatch(checkAuthStatus());
+    }
+  }, [isAuthenticated, loading, dispatch]);
   
   if (loading) {
     return <Text>Loading...</Text>;
   }
   
-  return isAuthenticated ? element : <Navigate to="/login" replace />;
+  return isAuthenticated && user ? element : <Navigate to="/login" replace />;
 };
 
 const AppContent: React.FC = () => {

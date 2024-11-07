@@ -8,18 +8,28 @@ export const checkAuthStatus = createAsyncThunk(
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/user`, {
         credentials: 'include',
+        headers: {
+          'Accept': 'application/json'
+        }
       });
 
       if (!response.ok) {
-        throw new Error('Not authenticated');
+        const error = await response.json();
+        dispatch(authFailure(error.error || 'Authentication failed'));
+        return null;
       }
 
       const userData = await response.json();
-      dispatch(authSuccess(userData));
-      return userData;
+      if (userData && userData.id) {
+        dispatch(authSuccess(userData));
+        return userData;
+      } else {
+        dispatch(authFailure('Invalid user data received'));
+        return null;
+      }
     } catch (error: any) {
-      dispatch(authFailure(error.message));
-      throw error;
+      dispatch(authFailure(error.message || 'Authentication check failed'));
+      return null;
     }
   }
 );

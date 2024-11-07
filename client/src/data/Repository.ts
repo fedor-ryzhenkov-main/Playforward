@@ -1,20 +1,13 @@
 import { Track, SerializedTrack } from 'data/models/Track';
-import { getDB } from 'data/Database';
-import { dbg } from 'utils/debug';
+import { api } from 'services/api';
+import { ApiResponse, ApiError } from 'types/api';
 
 /**
- * Represents a track record in the database
- */
-interface TrackRecord extends SerializedTrack {
-  audio?: ArrayBuffer;
-}
-
-/**
- * Repository for managing tracks in IndexedDB.
+ * Repository for managing tracks in PostgreSQL.
  * Handles the persistence and retrieval of Track entities and their audio data.
  */
 /**
- * Repository for managing tracks in IndexedDB.
+ * Repository for managing tracks in PostgreSQL.
  * Handles the persistence and retrieval of Track entities and their audio data.
  * Implements the singleton pattern to ensure only one instance exists.
  */
@@ -39,36 +32,23 @@ export class Repository {
    * @throws {Error} If database operation fails
    */
   async save(track: Track, audio?: ArrayBuffer): Promise<Track> {
-    dbg.db(`Saving track ${track.id}`);
-    const db = await getDB();
-    const tx = db.transaction(['tracks', 'audio'], 'readwrite');
+    const response = await api.post<ApiResponse<SerializedTrack>>('/tracks', track.serialize());
+    const savedTrack = Track.fromSerialized(response.data);
 
-    try {
-      dbg.db('Saving track metadata...');
-      await tx.objectStore('tracks').put(track.serialize());
+    if (audio) {
+      const formData = new FormData();
+      const blob = new Blob([audio], { type: 'application/octet-stream' });
+      formData.append('audio', blob);
 
-      if (audio) {
-        dbg.db(`Saving audio data (${audio.byteLength} bytes)...`);
-        await tx.objectStore('audio').put({
-          id: track.id,
-          data: audio,
-          lastModified: Date.now()
-        });
-        track.setAudio(audio);
-        dbg.db('Audio data saved successfully');
-      }
-
-      await tx.done;
-      dbg.db(`Track ${track.id} saved successfully`);
-      return track;
-    } catch (error) {
-      if (error instanceof Error) {
-        dbg.db(`Failed to save track: ${error.message}`);
-      } else {
-        dbg.db('Failed to save track: Unknown error');
-      }
-      throw error;
+      await api.post<ApiResponse<void>>(`/tracks/${track.id}/audio`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      savedTrack.setAudio(audio);
     }
+
+    return savedTrack;
   }
 
   /**
@@ -76,78 +56,48 @@ export class Repository {
    * @throws {Error} If track not found
    */
   async getAudio(id: string): Promise<ArrayBuffer> {
-    dbg.db(`Fetching audio for track ${id}`);
-    const db = await getDB();
-    const audioRecord = await db.get('audio', id);
-    
-    if (!audioRecord?.data) {
-      dbg.db(`Audio not found for track ${id}`);
-      throw new Error(`Audio not found for track ${id}`);
-    }
-    
-    dbg.db(`Retrieved audio data (${audioRecord.data.byteLength} bytes)`);
-    return audioRecord.data;
+    const response = await api.get<ArrayBuffer>(`/tracks/${id}/audio`, {
+      responseType: 'arraybuffer'
+    });
+    return response;
   }
 
   /**
    * Retrieves a track by its ID.
    */
   async getTrack(id: string): Promise<Track | null> {
-    const db = await getDB();
-    const record = await db.get('tracks', id) as TrackRecord | undefined;
-    
-    if (!record) return null;
-    
-    const track = Track.fromSerialized(record);
-    if (record.audio) {
-      track.setAudio(record.audio);
+    try {
+      const response = await api.get<ApiResponse<SerializedTrack>>(`/tracks/${id}`);
+      return Track.fromSerialized(response.data);
+    } catch (error) {
+      const apiError = error as ApiError;
+      if (apiError.response?.status === 404) {
+        return null;
+      }
+      throw error;
     }
-    return track;
   }
 
   /**
    * Retrieves all tracks (without audio data).
    */
   async getAll(): Promise<Track[]> {
-    const db = await getDB();
-    const records = await db.getAll('tracks') as TrackRecord[];
-    return records.map(record => Track.fromSerialized(record));
+    const response = await api.get<ApiResponse<SerializedTrack[]>>('/tracks');
+    return response.data.map(track => Track.fromSerialized(track));
   }
 
   /**
    * Deletes a track and its audio data from the database.
    */
   async delete(id: string): Promise<void> {
-    const db = await getDB();
-    await db.delete('tracks', id);
-  }
-
-  /**
-   * Clears all tracks from the database.
-   */
-  async clear(): Promise<void> {
-    const db = await getDB();
-    await db.clear('tracks');
+    await api.delete<ApiResponse<void>>(`/tracks/${id}`);
   }
 
   /**
    * Search tracks by tag.
    */
   async searchByTag(tag: string): Promise<Track[]> {
-    const db = await getDB();
-    const index = db.transaction('tracks').store.index('by-tags');
-    const keyRange = IDBKeyRange.only(tag);
-    const records = await index.getAll(keyRange) as TrackRecord[];
-    return records.map(record => Track.fromSerialized(record));
-  }
-
-  /**
-   * Search tracks by name.
-   */
-  async searchByName(name: string): Promise<Track[]> {
-    const db = await getDB();
-    const index = db.transaction('tracks').store.index('by-name');
-    const records = await index.getAll(name) as TrackRecord[];
-    return records.map(record => Track.fromSerialized(record));
+    const response = await api.get<ApiResponse<SerializedTrack[]>>('/tracks', { params: { tag } });
+    return response.data.map(track => Track.fromSerialized(track));
   }
 }

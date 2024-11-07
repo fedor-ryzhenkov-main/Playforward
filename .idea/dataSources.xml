@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
+    <data-source source="LOCAL" name="db@app-3c8969d9-8d1b-43dd-8846-3c382ae46f07-do-user-16123649-0.e.db.ondigitalocean.com" uuid="ac919097-98b0-445c-a04a-81d4de637915">
+      <driver-ref>postgresql</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.postgresql.Driver</jdbc-driver>
+      <jdbc-url>jdbc:postgresql://app-3c8969d9-8d1b-43dd-8846-3c382ae46f07-do-user-16123649-0.e.db.ondigitalocean.com:25060/db</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
+  </component>
+</project>
