@@ -1,7 +1,8 @@
 const { Pool } = require('pg');
 
 console.log('Initializing database connection...');
-console.log('DATABASE_URL format:', process.env.DATABASE_URL ? 'Present' : 'Missing');
+console.log('DATABASE_URL format:', process.env.DATABASE_URL ? 'Present' : 'Missing', process.env.DATABASE_URL);
+console.log('CA_CERT format:', process.env.CA_CERT ? 'Present' : 'Missing', process.env.CA_CERT);
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -12,7 +13,6 @@ const pool = new Pool({
 });
 
 
-// Add more detailed error handling
 pool.on('error', (err) => {
   console.error('Database pool error:', err);
   console.error('Error code:', err.code);
@@ -20,7 +20,6 @@ pool.on('error', (err) => {
   process.exit(-1);
 });
 
-// Test the connection on startup
 pool.connect((err, client, release) => {
   if (err) {
     console.error('Error acquiring client:', err.stack);
