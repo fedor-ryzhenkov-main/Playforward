@@ -8,14 +8,23 @@ router.use('/auth', authLimiter);
 
 // Add a session check endpoint
 router.get('/auth/check', (req, res) => {
-  res.json({
-    authenticated: req.isAuthenticated(),
-    user: req.user ? {
-      id: req.user.id,
-      email: req.user.email,
-      displayName: req.user.display_name
-    } : null
-  });
+  if (req.isAuthenticated() && req.user) {
+    const { id, email, display_name, picture_url } = req.user;
+    res.json({
+      authenticated: true,
+      user: {
+        id,
+        email,
+        displayName: display_name,
+        pictureUrl: picture_url
+      }
+    });
+  } else {
+    res.json({
+      authenticated: false,
+      user: null
+    });
+  }
 });
 
 const CLIENT_URL = process.env.CLIENT_URL || 'https://playforward.fedor-ryzhenkov.com';

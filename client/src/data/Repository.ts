@@ -1,6 +1,6 @@
 import { Track, SerializedTrack } from 'data/models/Track';
 import { api } from 'services/api';
-import { ApiResponse, ApiError } from 'types/api';
+import { ApiResponse, ApiError } from '@common/types/Api';
 
 /**
  * Repository for managing tracks in PostgreSQL.

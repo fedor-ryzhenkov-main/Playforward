@@ -27,7 +27,19 @@ export const checkAuthStatus = createAsyncThunk(
 export const initiateGoogleLogin = createAsyncThunk(
   'auth/googleLogin',
   async (_, { dispatch }) => {
-    window.location.href = environment.auth.googleAuthUrl;
+    try {
+      // First check if the session is already valid
+      const response = await api.get<ApiResponse<{authenticated: boolean, user: User | null}>>(environment.auth.checkAuthUrl);
+      if (response.data?.authenticated) {
+        return dispatch(authSuccess(response.data.user!));
+      }
+      
+      // If not authenticated, redirect to Google OAuth
+      window.location.href = environment.auth.googleAuthUrl;
+    } catch (error) {
+      dispatch(authFailure('Failed to initiate login'));
+      throw error;
+    }
   }
 );
 

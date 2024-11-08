@@ -5,6 +5,7 @@ export const environment = {
   },
   auth: {
     googleAuthUrl: `${process.env.REACT_APP_API_URL}/auth/google`,
-    userProfileUrl: `${process.env.REACT_APP_API_URL}/auth/user`
+    userProfileUrl: `${process.env.REACT_APP_API_URL}/auth/user`,
+    checkAuthUrl: `${process.env.REACT_APP_API_URL}/auth/check`
   }
 }; 

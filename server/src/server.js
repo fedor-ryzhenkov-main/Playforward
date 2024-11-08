@@ -50,9 +50,10 @@ app.use(session({
 app.use(cors({
   origin: CLIENT_URL,
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Content-Length'],
-  maxAge: 600 // Cache preflight requests for 10 minutes
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Set-Cookie'],
+  maxAge: 600
 }));
 
 // Parse JSON bodies

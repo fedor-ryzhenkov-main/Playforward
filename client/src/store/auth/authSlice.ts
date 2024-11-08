@@ -1,16 +1,9 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-
-interface UserProfile {
-  id: string;
-  email: string;
-  display_name: string;
-  picture_url: string;
-  created_at: string;
-}
+import { User } from '@common/types/User';
 
 interface AuthState {
   isAuthenticated: boolean;
-  user: UserProfile | null;
+  user: User | null;
   loading: boolean;
   error: string | null;
 }
@@ -30,7 +23,7 @@ const authSlice = createSlice({
       state.loading = true;
       state.error = null;
     },
-    authSuccess(state, action: PayloadAction<UserProfile>) {
+    authSuccess(state, action: PayloadAction<User>) {
       state.loading = false;
       state.isAuthenticated = true;
       state.user = action.payload;
