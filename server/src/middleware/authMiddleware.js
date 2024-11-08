@@ -17,15 +17,5 @@ const requireAuth = (req, res, next) => {
   next();
 };
 
-/**
- * Rate limiting for auth attempts
- * npm install express-rate-limit
- */
-const rateLimit = require('express-rate-limit');
 
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5 // limit each IP to 5 requests per windowMs
-});
-
-module.exports = { requireAuth, authLimiter }; 
+module.exports = { requireAuth }; 
