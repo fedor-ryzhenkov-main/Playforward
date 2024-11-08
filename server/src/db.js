@@ -14,9 +14,9 @@ const pool = new Pool({
   database: process.env.DB_DATABASE,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  ssl: {
+  ssl: process.env.NODE_ENV === 'production' ? {
     ca: process.env.DB_SSL_CA
-  }
+  } : false
 });
 
 // Add error handling for connection issues

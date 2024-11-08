@@ -1,22 +1,25 @@
+databases:
+- engine: PG
+  name: db
 domains:
 - domain: playforward.fedor-ryzhenkov.com
   type: PRIMARY
 ingress:
   rules:
   - component:
-      name: playforward-server
-    match:
-      path:
-        prefix: /api
-  - component:
       name: playforward-client
     match:
       path:
         prefix: /
+  - component:
+      name: playforward-server
+    match:
+      path:
+        prefix: /server
 name: playforward
 region: lon
 services:
-- environment_slug: node-js
+- dockerfile_path: server/Dockerfile
   envs:
   - key: CLIENT_URL
     scope: RUN_AND_BUILD_TIME
@@ -27,6 +30,48 @@ services:
   - key: NODE_ENV
     scope: RUN_AND_BUILD_TIME
     value: production
+  - key: GOOGLE_CLIENT_ID
+    scope: RUN_AND_BUILD_TIME
+    type: SECRET
+    value: EV[1:vU7xj6kXb5jIdvOE/O+XrrI2TKtozEJf:hoIexM5NaGHy5Zr0dOp+BPISzkLaneB0TbqbNvxgU5gctcL+dPq2gpippBgxTDXbkgE/5RaA46FBLjWVPmYBeC76eUqNqyU48H/0RmHUYYaXr8kQj0o/mw==]
+  - key: GOOGLE_CLIENT_SECRET
+    scope: RUN_AND_BUILD_TIME
+    type: SECRET
+    value: EV[1:Pr4MX9ABhyM6P4p25C9FDHcvcV/55e/6:1Y5H7f8xklq+vS/BclsHORO1d4xAU+6CTEz5svIWmApZyidX35i8yIO9kFy5TlgARFyL]
+  - key: DATABASE_URL
+    scope: RUN_AND_BUILD_TIME
+    value: ${db.DATABASE_URL}
+  - key: SESSION_SECRET
+    scope: RUN_AND_BUILD_TIME
+    type: SECRET
+    value: EV[1:xCiQt4evXJ3J77yFUjGX7ZiTu3Hl78+J:iqRQiQeL0jXcQSUw31nAMJlDwVLEeMX/RafOzrH5JMu3Fd/tmnbentHDuyMn+VwkhlAra98Bwc+IHr64GrbIBq3G9ZY0mEulXvEJ/p4XFyaUiZQY79jK8zUiXXU+39KVpstsT/+gGJIxOb4VdHAGlxLPf/biKESGZFzu/dbQr2+d2q8pgtLPi9Bebiqd/WYx]
+  - key: API_URL
+    scope: RUN_AND_BUILD_TIME
+    value: ${APP_URL}/server
+  - key: DB_SSL__CA
+    scope: RUN_AND_BUILD_TIME
+    value: ${db.CA_CERT}
+  - key: DB_SSL_REJECT_UNAUTHORIZED
+    scope: RUN_AND_BUILD_TIME
+    value: "true"
+  - key: NODE_TLS_REJECT_UNAUTHORIZED
+    scope: RUN_AND_BUILD_TIME
+    value: "0"
+  - key: DB_USER
+    scope: RUN_AND_BUILD_TIME
+    value: ${db.USERNAME}
+  - key: DB_HOST
+    scope: RUN_AND_BUILD_TIME
+    value: ${db.HOSTNAME}
+  - key: DB_PORT
+    scope: RUN_AND_BUILD_TIME
+    value: ${db.PORT}
+  - key: DB_PASSWORD
+    scope: RUN_AND_BUILD_TIME
+    value: ${db.PASSWORD}
+  - key: DB_DATABASE
+    scope: RUN_AND_BUILD_TIME
+    value: ${db.DATABASE}
   github:
     branch: main
     deploy_on_push: true
@@ -36,21 +81,13 @@ services:
   instance_size_slug: basic-xs
   name: playforward-server
   source_dir: server
-  dockerfile_path: server/Dockerfile
-  health_check:
-    http_path: /api/health
-    initial_delay_seconds: 30
-    period_seconds: 60
-    timeout_seconds: 10
-    success_threshold: 1
-    failure_threshold: 3
 static_sites:
 - catchall_document: index.html
   environment_slug: node-js
   envs:
   - key: REACT_APP_API_URL
     scope: BUILD_TIME
-    value: ${APP_URL}/api
+    value: ${APP_URL}/server
   - key: NODE_ENV
     scope: BUILD_TIME
     value: production

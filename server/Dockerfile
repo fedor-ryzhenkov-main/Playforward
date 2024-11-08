@@ -26,15 +26,8 @@ RUN npm install
 # Copy app source
 COPY . .
 
-# Create downloads directory
-RUN mkdir -p downloads && chmod 755 downloads
-
 # Expose port
 EXPOSE 3001
-
-# Set environment variables
-ENV NODE_ENV=production
-ENV PORT=3001
 
 # Start the server
 CMD ["node", "src/server.js"] 
