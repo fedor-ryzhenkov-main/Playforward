@@ -1,87 +1,116 @@
+// server/src/routes/authRoutes.js
 const express = require('express');
 const passport = require('passport');
+const morgan = require('morgan');
 const router = express.Router();
-const { authLimiter } = require('../middleware/authMiddleware');
 
-// Apply rate limiting to auth routes
-router.use('/auth', authLimiter);
+// Configure Morgan for HTTP request logging
+router.use(morgan(':method :url :status :response-time ms - :res[content-length]'));
 
-// Add a session check endpoint
-router.get('/auth/check', (req, res) => {
+// Custom logging middleware
+const logAuthEvent = (event, data) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] AUTH EVENT: ${event}`, data);
+};
+
+// Initiate Google OAuth
+router.get('/google', (req, res, next) => {
+  logAuthEvent('Google Auth Initiated', { ip: req.ip });
+  next();
+}, passport.authenticate('google', { 
+  scope: ['profile', 'email']
+}));
+
+// Handle Google OAuth callback
+router.get('/google/callback', 
+  (req, res, next) => {
+    logAuthEvent('Google Callback Received', { 
+      query: req.query,
+      ip: req.ip 
+    });
+    next();
+  },
+  passport.authenticate('google', { 
+    failureRedirect: `${process.env.CLIENT_URL}/login`,
+  }),
+  (req, res) => {
+    logAuthEvent('Authentication Successful', { 
+      userId: req.user?.id,
+      email: req.user?.email 
+    });
+    res.redirect(`${process.env.CLIENT_URL}/welcome`);
+  }
+);
+
+// Get authenticated user data
+router.get('/user', (req, res) => {
+  // Disable caching
+  res.set('Cache-Control', 'no-store');
+
   if (req.isAuthenticated() && req.user) {
     const { id, email, display_name, picture_url } = req.user;
+    logAuthEvent('User Data Requested', { userId: id });
+    
     res.json({
-      authenticated: true,
-      user: {
-        id,
-        email,
-        displayName: display_name,
-        pictureUrl: picture_url
-      }
+      data: {
+        authenticated: true,
+        user: { 
+          id, 
+          email, 
+          displayName: display_name, 
+          pictureUrl: picture_url 
+        }
+      },
+      status: 200,
+      statusText: 'OK'
     });
   } else {
-    res.json({
-      authenticated: false,
-      user: null
+    logAuthEvent('Unauthenticated User Data Request', { authenticated: false });
+    res.status(401).json({
+      data: {
+        authenticated: false,
+        user: null
+      },
+      status: 401,
+      statusText: 'Unauthorized'
     });
   }
 });
 
-const CLIENT_URL = process.env.CLIENT_URL || 'https://playforward.fedor-ryzhenkov.com';
+// Logout route
+router.post('/logout', (req, res) => {
+  const userId = req.user?.id;
+  logAuthEvent('Logout Initiated', { userId });
 
-/**
- * @route GET /auth/google
- * @desc Initiates Google OAuth flow
- */
-router.get('/auth/google',
-  passport.authenticate('google', { 
-    scope: ['profile', 'email'],
-    prompt: 'select_account'
-  })
-);
-
-/**
- * @route GET /auth/google/callback
- * @desc Handles the Google OAuth callback
- */
-router.get('/auth/google/callback',
-  passport.authenticate('google', { 
-    failureRedirect: `${CLIENT_URL}/login?error=auth_failed`,
-    successRedirect: `${CLIENT_URL}/player`
-  })
-);
-
-/**
- * @route GET /auth/user
- * @desc Returns the authenticated user's profile
- */
-router.get('/auth/user', (req, res) => {
-  if (req.isAuthenticated() && req.user) {
-    const { id, email, display_name, picture_url, created_at } = req.user;
-    res.json({
-      id,
-      email,
-      displayName: display_name,
-      pictureUrl: picture_url,
-      createdAt: created_at
-    });
-  } else {
-    res.status(401).json({ error: 'Not authenticated' });
-  }
-});
-
-/**
- * @route POST /auth/logout
- * @desc Logs out the current user
- */
-router.post('/auth/logout', (req, res) => {
+  // Destroy the session
   req.session.destroy((err) => {
     if (err) {
-      return res.status(500).json({ error: 'Logout failed' });
+      logAuthEvent('Logout Failed', { 
+        userId,
+        error: err.message 
+      });
+      return res.status(500).json({
+        data: { error: 'Logout failed' },
+        status: 500,
+        statusText: 'Internal Server Error'
+      });
     }
-    res.clearCookie('sid'); 
-    res.json({ message: 'Logged out successfully' });
+
+    // Clear session cookie
+    res.clearCookie('sid', {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    });
+
+    logAuthEvent('Logout Successful', { userId });
+    res.json({
+      data: { message: 'Logged out successfully' },
+      status: 200,
+      statusText: 'OK'
+    });
   });
 });
 
-module.exports = router; 
+module.exports = router;

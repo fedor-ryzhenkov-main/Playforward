@@ -7,32 +7,20 @@ import Welcome from 'features/pages/Welcome';
 import Player from 'features/pages/Playforward';
 import Login from 'features/pages/Login';
 import AppHeader from 'features/components/AppHeader';
-import { ModalManager } from './components/modal/ModalManager';
 import { Text } from 'design-system/components';
+import { ModalManager } from './components/modal/ModalManager';
 
-const PrivateRoute: React.FC<{ element: React.ReactElement }> = ({ element }) => {
-  const { isAuthenticated, loading, user } = useSelector((state: RootState) => state.auth);
+const AppRouter: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-
-  useEffect(() => {
-    if (!isAuthenticated && !loading) {
-      dispatch(checkAuthStatus());
-    }
-  }, [isAuthenticated, loading, dispatch]);
-  
-  if (loading) {
-    return <Text>Loading...</Text>;
-  }
-  
-  return isAuthenticated && user ? element : <Navigate to="/login" replace />;
-};
-
-const AppContent: React.FC = () => {
-  const dispatch = useDispatch<AppDispatch>();
+  const { isAuthenticated, loading } = useSelector((state: RootState) => state.auth);
 
   useEffect(() => {
     dispatch(checkAuthStatus());
   }, [dispatch]);
+
+  if (loading) {
+    return <Text>Loading...</Text>;
+  }
 
   return (
     <>
@@ -41,8 +29,12 @@ const AppContent: React.FC = () => {
         <AppHeader />
         <Routes>
           <Route path="/welcome" element={<Welcome />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/player" element={<PrivateRoute element={<Player />} />} />
+          <Route path="/login" element={
+            isAuthenticated ? <Navigate to="/player" replace /> : <Login />
+          } />
+          <Route path="/player" element={
+            isAuthenticated ? <Player /> : <Navigate to="/login" replace />
+          } />
           <Route path="*" element={<Navigate to="/welcome" replace />} />
         </Routes>
       </BrowserRouter>
@@ -50,12 +42,10 @@ const AppContent: React.FC = () => {
   );
 };
 
-const App: React.FC = () => {
-  return (
-    <Provider store={store}>
-      <AppContent />
-    </Provider>
-  );
-};
+const App: React.FC = () => (
+  <Provider store={store}>
+    <AppRouter />
+  </Provider>
+);
 
 export default App;

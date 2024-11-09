@@ -1,6 +1,7 @@
 const { Pool } = require('pg');
 
 console.log('Initializing database connection...');
+
 console.log('Connection details:', {
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,

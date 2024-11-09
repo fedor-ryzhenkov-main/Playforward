@@ -1,9 +1,12 @@
-require('dotenv').config({
-  path: process.env.NODE_ENV === 'production' 
+// server/src/server.js
+const dotenv = require('dotenv');
+
+dotenv.config({
+  path: process.env.NODE_ENV === 'production'
     ? '.env.production'
-    : process.env.NODE_ENV === 'development' 
-      ? '.env.development' 
-      : '.env'
+    : process.env.NODE_ENV === 'development'
+      ? '.env.development'
+      : '.env',
 });
 
 const express = require('express');
@@ -11,43 +14,47 @@ const session = require('express-session');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const cors = require('cors');
+const morgan = require('morgan');
 const pgSession = require('connect-pg-simple')(session);
 const { pool } = require('./db');
-const helmet = require('helmet');
-
 const { findOrCreateGoogleUser, findUserById } = require('./models/userModel');
-const trackRoutes = require('./routes/trackRoutes');
-const authRoutes = require('./routes/authRoutes');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
-const CLIENT_URL = process.env.CLIENT_URL || 'https://playforward.fedor-ryzhenkov.com';
-const isDevelopment = process.env.NODE_ENV !== 'production';
+const PORT = process.env.PORT;
+const CLIENT_URL = process.env.CLIENT_URL;
 
-// ============================
-// Middleware Configuration
-// ============================
+// Configure Morgan logging
+morgan.token('user-id', (req) => req.user?.id || 'anonymous');
+morgan.token('body', (req) => JSON.stringify(req.body));
 
-// Trust proxy if behind a reverse proxy (e.g., Nginx)
-app.set('trust proxy', 1);
+// Development logging
+if (process.env.NODE_ENV !== 'production') {
+  app.use(morgan(':method :url :status :response-time ms - :user-id :body'));
+} else {
+  // Production logging (less verbose)
+  app.use(morgan(':method :url :status :response-time ms - :user-id'));
+}
 
-// Configure session middleware
+// Basic middleware
+app.use(cors({ origin: CLIENT_URL, credentials: true }));
+app.use(express.json());
 app.use(session({
   store: new pgSession({
     pool,
     tableName: 'session',
-    pruneSessionInterval: 24 * 60 * 60 // 1 day
+    pruneSessionInterval: 24 * 60 * 60, // 1 day
   }),
-  secret: process.env.SESSION_SECRET || '0000',
+  name: 'sid', // Custom cookie name
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: !isDevelopment, // Use secure cookies in production
+    secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 1 day
-    sameSite: 'lax'  // Protect against CSRF
-  },
-  name: 'sid'  // Change session cookie name from default 'connect.sid'
+    sameSite: 'lax',
+    path: '/'
+  }
 }));
 
 // Configure CORS
@@ -57,77 +64,53 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   exposedHeaders: ['Set-Cookie'],
-  maxAge: 600
-}));
-
-// Parse JSON bodies
-app.use(express.json({ limit: '50mb' }));
-app.use(express.raw({ 
-  type: 'application/octet-stream',
-  limit: '50mb' 
+  maxAge: 600,
 }));
 
 // Initialize Passport
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Add routes
-app.use(trackRoutes);
-app.use(authRoutes);
-
-// ============================
-// Passport Configuration
-// ============================
-
 // Google OAuth Strategy
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: `${process.env.API_URL}/auth/google/callback`,
-    passReqToCallback: true
   },
-  async function(req, accessToken, refreshToken, profile, done) {
+  async (accessToken, refreshToken, profile, done) => {
     try {
       const user = await findOrCreateGoogleUser(profile);
       return done(null, user);
     } catch (error) {
-      return done(error);
+      return done(error, null);
     }
   }
 ));
 
-// Serialize User
 passport.serializeUser((user, done) => {
   done(null, user.id);
 });
 
-// Deserialize User
 passport.deserializeUser(async (id, done) => {
   try {
     const user = await findUserById(id);
-    if (!user) {
-      return done(new Error('User not found'));
-    }
     done(null, user);
   } catch (err) {
-    done(err);
+    done(err, null);
   }
 });
 
-// ============================
-// Error Handling Middleware
-// ============================
+// Simple auth check middleware
+const requireAuth = (req, res, next) => {
+  if (req.isAuthenticated()) return next();
+  res.status(401).json({ error: 'Unauthorized' });
+};
 
-app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({ error: 'Internal server error' });
-});
-
-// ============================
-// Server Initialization
-// ============================
+// Routes
+app.use('/auth', require('./routes/authRoutes'));
+app.use('/tracks', requireAuth, require('./routes/trackRoutes'));
+app.use('/', require('./routes/basicRoutes'));
 
 app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-  console.log(`Accepting requests from: ${CLIENT_URL}`);
+  console.log(`Server running on port ${PORT}`);
 });

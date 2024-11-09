@@ -1,12 +1,9 @@
 const express = require('express');
-const { requireAuth } = require('../middleware/authMiddleware');
 const trackModel = require('../models/trackModel');
 const { upload } = require('../middleware/audioMiddleware');
 const router = express.Router();
 
-router.use(requireAuth);
-
-router.post('/tracks', async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const track = await trackModel.createTrack(req.user.id, req.body);
     res.json({
@@ -15,6 +12,7 @@ router.post('/tracks', async (req, res) => {
       statusText: 'OK'
     });
   } catch (error) {
+    console.error('Error creating track:', error);
     res.status(500).json({
       data: null,
       status: 500,
@@ -23,7 +21,7 @@ router.post('/tracks', async (req, res) => {
   }
 });
 
-router.post('/tracks/:id/audio', upload.single('audio'), async (req, res) => {
+router.post('/:id/audio', upload.single('audio'), async (req, res) => {
   try {
     await trackModel.saveAudio(req.params.id, req.file.buffer);
     res.json({
@@ -40,7 +38,7 @@ router.post('/tracks/:id/audio', upload.single('audio'), async (req, res) => {
   }
 });
 
-router.get('/tracks', async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const tracks = await trackModel.getUserTracks(req.user.id);
     res.json({
@@ -57,7 +55,7 @@ router.get('/tracks', async (req, res) => {
   }
 });
 
-router.get('/tracks/:id', async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const track = await trackModel.getTrack(req.params.id, req.user.id);
     if (!track) {
@@ -81,7 +79,7 @@ router.get('/tracks/:id', async (req, res) => {
   }
 });
 
-router.delete('/tracks/:id', async (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     await trackModel.deleteTrack(req.params.id, req.user.id);
     res.json({
@@ -98,7 +96,7 @@ router.delete('/tracks/:id', async (req, res) => {
   }
 });
 
-router.get('/tracks/:id/audio', async (req, res) => {
+router.get('/:id/audio', async (req, res) => {
   try {
     const audio = await trackModel.getTrackAudio(req.params.id, req.user.id);
     if (!audio) {
@@ -118,7 +116,7 @@ router.get('/tracks/:id/audio', async (req, res) => {
   }
 });
 
-router.put('/tracks/:id', async (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const track = await trackModel.updateTrack(req.params.id, req.user.id, req.body);
     res.json({

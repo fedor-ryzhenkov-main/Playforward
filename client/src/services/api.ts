@@ -1,12 +1,13 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-import { environment } from '../config/environment';
+import store from '../store';
+import { logout } from '../store/auth/authSlice';
 
 class Api {
   private client: AxiosInstance;
 
   constructor() {
     this.client = axios.create({
-      baseURL: environment.api.baseUrl,
+      baseURL: process.env.REACT_APP_API_URL,
       withCredentials: true,
       headers: {
         'Content-Type': 'application/json',
@@ -17,8 +18,10 @@ class Api {
       response => response,
       error => {
         if (error.response?.status === 401) {
-          // Handle unauthorized access - could dispatch to auth store
-          window.location.href = '/login';
+          store.dispatch(logout());
+          if (!window.location.pathname.includes('/login')) {
+            window.location.href = '/login';
+          }
         }
         return Promise.reject(error);
       }
