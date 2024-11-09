@@ -6,23 +6,42 @@ class YoutubeService {
 
   static async initiateDownload(userId, url) {
     return new Promise((resolve, reject) => {
-      const args = process.env.NODE_ENV === 'development' 
-        ? [url]
-        : [`--username=oauth+${userId}`, '--password=""', url];
+      const isDevelopment = (process.env.NODE_ENV || 'development') === 'development';
+      
+      const args = isDevelopment 
+        ? [
+            url,
+            '--extract-audio',
+            '--audio-format', 'mp3',
+            '--audio-quality', '0',
+            '-o', '-'
+          ]
+        : [
+            `--username=oauth+${userId}`,
+            '--password=""',
+            url,
+            '--extract-audio',
+            '--audio-format', 'mp3',
+            '--audio-quality', '0',
+            '-o', '-'
+          ];
 
-      const process = spawn('yt-dlp', args);
+      console.log('Spawning yt-dlp with args:', args);
 
-      let authCode = null;
-      let isAuthRequired = false;
+      const ytDlp = spawn('yt-dlp', args);
+      const chunks = [];
 
-      process.stderr.on('data', (data) => {
+      ytDlp.stdout.on('data', (data) => {
+        chunks.push(data);
+        console.log('Received chunk of size:', data.length);
+      });
+
+      ytDlp.stderr.on('data', (data) => {
         const output = data.toString();
         console.log('yt-dlp stderr:', output);
 
         if (output.includes('enter code')) {
-          isAuthRequired = true;
-          authCode = output.match(/code\s+([A-Z0-9-]+)/)[1];
-
+          const authCode = output.match(/code\s+([A-Z0-9-]+)/)[1];
           resolve({
             status: 'auth_required',
             authCode
@@ -30,29 +49,28 @@ class YoutubeService {
         }
       });
 
-      process.stdout.on('data', (data) => {
-        console.log('yt-dlp stdout:', data.toString());
-      });
-
-      process.on('error', (error) => {
+      ytDlp.on('error', (error) => {
         console.error('yt-dlp process error:', error);
         reject(error);
       });
 
-      process.on('close', (code) => {
+      ytDlp.on('close', (code) => {
         console.log('yt-dlp process closed with code:', code);
         
-        if (code !== 0 && !isAuthRequired) {
+        if (code === 0) {
+          const buffer = Buffer.concat(chunks);
+          resolve({
+            status: 'completed',
+            data: buffer
+          });
+        } else {
           reject(new Error(`yt-dlp process exited with code ${code}`));
         }
-        
-        if (isAuthRequired) {
-          this.downloadProcesses.set(userId, {
-            process,
-            authCode,
-            status: 'auth_required'
-          });
-        }
+      });
+
+      this.downloadProcesses.set(userId, {
+        process: ytDlp,
+        status: 'downloading'
       });
     });
   }
@@ -63,8 +81,7 @@ class YoutubeService {
       return { status: 'not_found' };
     }
     return {
-      status: processInfo.status,
-      authCode: processInfo.authCode
+      status: processInfo.status
     };
   }
 
