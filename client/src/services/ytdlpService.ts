@@ -8,13 +8,17 @@ interface DownloadOptions {
   onProgress?: (progress: number) => void;
 }
 
+interface DownloadResponse {
+  status: 'auth_required' | 'completed';
+  authCode?: string;
+  data?: Blob;
+}
+
 export class YtDlpService {
   private static readonly API_URL = process.env.REACT_APP_API_URL || 
     (process.env.NODE_ENV === 'production' 
-      ? window.location.origin + '/server' 
-      : 'http://localhost:3001/server');
-
-  private static readonly TIMEOUT = 5 * 60 * 1000; // 5 minutes
+      ? window.location.origin + '/server'
+      : 'http://localhost:3001');
 
   /**
    * Validates a YouTube URL
@@ -38,82 +42,77 @@ export class YtDlpService {
    * @throws Error if the download fails or times out
    */
   public static async downloadVideo(
-    url: string, 
+    url: string,
     options: DownloadOptions = {}
   ): Promise<Blob | null> {
-    const { format = 'bestaudio', onProgress } = options;
-
-    // Validate URL
     if (!this.isValidYouTubeUrl(url)) {
       throw new Error('Invalid YouTube URL');
     }
 
     try {
-      dbg.store(`Starting download from ${url} with format ${format}`);
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.TIMEOUT);
-
-      const response = await fetch(`${this.API_URL}/api/download`, {
+      dbg.store('Initiating YouTube download...');
+      
+      const response = await fetch(`${this.API_URL}/youtube/download/init`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url, format }),
+        body: JSON.stringify({ url }),
         credentials: 'include',
-        signal: controller.signal
       });
-
-      clearTimeout(timeoutId);
-
-      if (response.status === 401) {
-        window.location.href = `${this.API_URL}/auth/youtube`;
-        return null;
-      }
 
       if (!response.ok) {
         const errorText = await response.text();
-        dbg.store(`Download failed: ${errorText}`);
         throw new Error(`Download failed: ${errorText}`);
       }
 
-      // Handle download progress if callback provided
-      if (onProgress && response.body) {
-        const reader = response.body.getReader();
-        const contentLength = +(response.headers.get('Content-Length') ?? 0);
-        let receivedLength = 0;
-        const chunks: Uint8Array[] = [];
+      const data: DownloadResponse = await response.json();
+      dbg.store('Download response:', data);
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          chunks.push(value);
-          receivedLength += value.length;
-          onProgress(contentLength ? (receivedLength / contentLength) * 100 : 0);
-        }
-
-        const blob = new Blob(chunks);
-        dbg.store(`Download completed: ${blob.size} bytes`);
-        return blob;
+      if (data.status === 'auth_required') {
+        window.open('https://www.google.com/device', '_blank');
+        alert(`Please enter this code on the Google device page: ${data.authCode}`);
+        
+        return await this.pollDownloadStatus();
       }
 
-      const blob = await response.blob();
-      dbg.store(`Download completed: ${blob.size} bytes`);
-      return blob;
-
+      return null;
     } catch (error) {
-      if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          dbg.store('Download timed out');
-          throw new Error('Download timed out');
+      dbg.store(`Download error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw error;
+    }
+  }
+
+  private static async pollDownloadStatus(interval = 1000): Promise<Blob | null> {
+    let attempts = 0;
+    const maxAttempts = 300; // 5 minutes maximum
+
+    while (attempts < maxAttempts) {
+      try {
+        const response = await fetch(`${this.API_URL}/youtube/download/status`, {
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to get download status');
         }
-        dbg.store(`Download error: ${error.message}`);
+
+        const data = await response.json();
+        dbg.store('Download status:', data);
+
+        if (data.status === 'completed') {
+          return new Blob([data.data], { type: 'audio/mpeg' });
+        }
+
+        await new Promise(resolve => setTimeout(resolve, interval));
+        attempts++;
+      } catch (error) {
+        dbg.store(`Status check error: ${error instanceof Error ? error.message : 'Unknown error'}`);
         throw error;
       }
-      dbg.store('Unknown download error occurred');
-      throw new Error('Unknown download error occurred');
     }
+
+    throw new Error('Download timed out');
   }
 
   /**

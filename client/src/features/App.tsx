@@ -6,7 +6,6 @@ import { checkAuthStatus } from 'store/auth/authThunks';
 import Welcome from 'features/pages/Welcome';
 import Player from 'features/pages/Playforward';
 import Login from 'features/pages/Login';
-import AppHeader from 'features/components/AppHeader';
 import { Text } from 'design-system/components';
 import { ModalManager } from './components/modal/ModalManager';
 
@@ -26,7 +25,6 @@ const AppRouter: React.FC = () => {
     <>
       <ModalManager />
       <BrowserRouter>
-        <AppHeader />
         <Routes>
           <Route path="/welcome" element={<Welcome />} />
           <Route path="/login" element={
