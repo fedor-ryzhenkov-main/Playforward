@@ -1,5 +1,5 @@
 const express = require('express');
-const YoutubeService = require('../services/youtubeService');
+const YoutubeService = require('../services/ytdlpService');
 const router = express.Router();
 
 router.post('/download/init', async (req, res) => {
@@ -25,7 +25,7 @@ router.post('/download/init', async (req, res) => {
 });
 
 router.get('/download/status', (req, res) => {
-  const userId = '0000'; // TODO: Get actual user ID from auth
+  const userId = '0000';
   
   try {
     const status = YoutubeService.getDownloadStatus(userId);
@@ -39,7 +39,7 @@ router.get('/download/status', (req, res) => {
 });
 
 router.delete('/download', (req, res) => {
-  const userId = '0000'; // TODO: Get actual user ID from auth
+  const userId = '0000';
   
   try {
     YoutubeService.cleanupDownload(userId);

@@ -109,7 +109,7 @@ const requireAuth = (req, res, next) => {
 // Routes
 app.use('/auth', require('./routes/authRoutes'));
 app.use('/tracks', requireAuth, require('./routes/trackRoutes'));
-app.use('/youtube', requireAuth, require('./routes/youtubeRoutes'));
+app.use('/youtube', requireAuth, require('./routes/ytdlpRoutes'));
 app.use('/', require('./routes/basicRoutes'));
 
 app.listen(PORT, () => {

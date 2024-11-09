@@ -9,9 +9,10 @@ interface DownloadOptions {
 }
 
 interface DownloadResponse {
-  status: 'auth_required' | 'completed';
+  status: 'auth_required' | 'completed' | 'downloading' | 'error';
   authCode?: string;
-  data?: Blob;
+  data?: ArrayBuffer;
+  progress?: number;
 }
 
 export class YtDlpService {
@@ -72,8 +73,7 @@ export class YtDlpService {
       if (data.status === 'auth_required') {
         window.open('https://www.google.com/device', '_blank');
         alert(`Please enter this code on the Google device page: ${data.authCode}`);
-        
-        return await this.pollDownloadStatus();
+        return await this.pollDownloadStatus(options.onProgress);
       }
 
       return null;
@@ -83,7 +83,15 @@ export class YtDlpService {
     }
   }
 
-  private static async pollDownloadStatus(interval = 1000): Promise<Blob | null> {
+  /**
+   * Polls the server for download status and data
+   * @param onProgress - Optional callback for download progress
+   * @returns Promise with the downloaded audio as a Blob
+   */
+  private static async pollDownloadStatus(
+    onProgress?: (progress: number) => void,
+    interval = 1000
+  ): Promise<Blob | null> {
     let attempts = 0;
     const maxAttempts = 300; // 5 minutes maximum
 
@@ -97,11 +105,20 @@ export class YtDlpService {
           throw new Error('Failed to get download status');
         }
 
-        const data = await response.json();
+        const data: DownloadResponse = await response.json();
         dbg.store('Download status:', data);
 
+        if (data.progress && onProgress) {
+          onProgress(data.progress);
+        }
+
         if (data.status === 'completed' && data.data) {
-          return new Blob([data.data], { type: 'audio/mpeg' });
+          // Convert the ArrayBuffer to a Blob
+          return new Blob([new Uint8Array(data.data)], { type: 'audio/mpeg' });
+        }
+
+        if (data.status === 'error') {
+          throw new Error('Download failed on server');
         }
 
         await new Promise(resolve => setTimeout(resolve, interval));
@@ -121,7 +138,7 @@ export class YtDlpService {
    */
   public static async checkServerHealth(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.API_URL}/api/health`, {
+      const response = await fetch(`${this.API_URL}/health`, {
         credentials: 'include',
       });
       const data = await response.json();
