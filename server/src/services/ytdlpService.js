@@ -1,97 +1,142 @@
 const { spawn } = require('child_process');
-const { EventEmitter } = require('events');
+const trackModel = require('../models/trackModel');
+const { v4: uuidv4 } = require('uuid');
+const fs = require('fs').promises;
 
 class YoutubeService {
-  static async initiateDownload(userId, url) {
+  static downloadProcesses = new Map();
+
+  static async initiateDownload(userId, url, metadata) {
+    // Validate metadata first
+    if (!metadata?.name) {
+      throw new Error('Track name is required');
+    }
+
     return new Promise((resolve, reject) => {
-      const isDevelopment = (process.env.NODE_ENV || 'development') === 'development';
+      const trackId = uuidv4();
+      const outputPath = `/tmp/${trackId}.mp3`;
+      
       const args = [
-        ...(isDevelopment ? [] : [`--username=oauth+${userId}`, '--password=""']),
         url,
         '--extract-audio',
         '--audio-format', 'mp3',
         '--audio-quality', '0',
-        '--print', 'after_move:filepath',
-        '-o', '%(title)s.%(ext)s'
+        '-o', outputPath
       ];
 
-      console.log('Starting download with args:', args);
-
       const ytDlp = spawn('yt-dlp', args);
-      let outputFilePath = '';
-
-      ytDlp.stdout.on('data', (data) => {
-        const output = data.toString().trim();
-        console.log('yt-dlp stdout:', output);
-        if (output && !output.includes('[download]')) {
-          outputFilePath = output;
-        }
-      });
-
+      
       ytDlp.stderr.on('data', (data) => {
         const output = data.toString();
         console.log('yt-dlp stderr:', output);
-
+        
         if (output.includes('enter code')) {
           const authCode = output.match(/code\s+([A-Z0-9-]+)/)[1];
           this.downloadProcesses.set(userId, {
             process: ytDlp,
             status: 'auth_required',
             authCode,
-            outputFilePath
+            trackId,
+            metadata: {
+              id: trackId,
+              name: metadata.name,
+              description: metadata.description || '',
+              tags: metadata.tags || []
+            },
+            outputPath
           });
           resolve({ status: 'auth_required', authCode });
         }
       });
 
+      ytDlp.stdout.on('data', (data) => {
+        console.log('yt-dlp stdout:', data.toString());
+      });
+
       ytDlp.on('close', async (code) => {
         console.log('yt-dlp process closed with code:', code);
+        const processInfo = this.downloadProcesses.get(userId);
         
-        if (code === 0 && outputFilePath) {
+        if (code === 0) {
           try {
-            const fs = require('fs');
-            const data = await fs.promises.readFile(outputFilePath);
-            const processInfo = this.downloadProcesses.get(userId);
+            // First check if the file exists and is readable
+            await fs.access(outputPath);
+            const audioBuffer = await fs.readFile(outputPath);
+
+            // Create track record only after successful download
+            const track = await trackModel.createTrack(userId, {
+              id: trackId,
+              name: metadata.name,
+              description: metadata.description || '',
+              tags: metadata.tags || []
+            });
             
-            if (processInfo) {
-              processInfo.status = 'completed';
-              processInfo.data = data;
+            if (!track) {
+              throw new Error('Failed to create track record');
             }
 
-            // Clean up the temporary file
-            await fs.promises.unlink(outputFilePath);
+            // Save the audio data
+            await trackModel.saveAudio(trackId, audioBuffer);
             
-            if (!isDevelopment && !processInfo?.authCode) {
-              resolve({ status: 'completed', data });
+            // Clean up the temporary file
+            await fs.unlink(outputPath);
+            
+            // Update process status
+            if (processInfo) {
+              processInfo.status = 'completed';
+              processInfo.trackId = trackId;
+            }
+
+            // If no auth was required, resolve immediately
+            if (!processInfo?.authCode) {
+              resolve({ status: 'completed', trackId });
             }
           } catch (error) {
-            console.error('Error reading downloaded file:', error);
+            console.error('Error processing download:', error);
+            
+            // Clean up on error
+            try {
+              await fs.unlink(outputPath);
+            } catch (unlinkError) {
+              console.error('Failed to clean up temporary file:', unlinkError);
+            }
+            
             reject(error);
           }
         } else {
+          // Clean up process info on failure
+          this.downloadProcesses.delete(userId);
           reject(new Error(`yt-dlp process exited with code ${code}`));
         }
       });
 
       ytDlp.on('error', (error) => {
         console.error('yt-dlp process error:', error);
+        this.downloadProcesses.delete(userId);
         reject(error);
       });
     });
   }
 
-  static getDownloadStatus(userId) {
+  static async getDownloadStatus(userId) {
     const processInfo = this.downloadProcesses.get(userId);
+    
     if (!processInfo) {
       return { status: 'not_found' };
     }
 
-    if (processInfo.status === 'completed' && processInfo.data) {
-      const data = processInfo.data;
+    if (processInfo.status === 'completed') {
+      // Verify track exists before returning success
+      const track = await trackModel.getTrack(processInfo.trackId, userId);
+      if (!track) {
+        this.downloadProcesses.delete(userId);
+        return { status: 'error', message: 'Track not found' };
+      }
+
       this.downloadProcesses.delete(userId);
-      return {
-        status: 'completed',
-        data: data
+      return { 
+        status: 'completed', 
+        trackId: processInfo.trackId 
       };
     }
 
@@ -100,6 +145,23 @@ class YoutubeService {
       authCode: processInfo.authCode
     };
   }
+
+  static async cleanupDownload(userId) {
+    const processInfo = this.downloadProcesses.get(userId);
+    if (processInfo) {
+      if (processInfo.process) {
+        processInfo.process.kill();
+      }
+      if (processInfo.outputPath) {
+        try {
+          await fs.unlink(processInfo.outputPath);
+        } catch (error) {
+          console.error('Failed to clean up temporary file:', error);
+        }
+      }
+      this.downloadProcesses.delete(userId);
+    }
+  }
 }
 
-module.exports = YoutubeService;
+module.exports = YoutubeService; 

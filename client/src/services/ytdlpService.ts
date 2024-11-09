@@ -5,14 +5,17 @@ import { dbg } from '@utils/debug';
 
 interface DownloadOptions {
   format?: string;
-  onProgress?: (progress: number) => void;
+  metadata: {
+    name: string;
+    description: string;
+    tags: string[];
+  };
 }
 
 interface DownloadResponse {
-  status: 'auth_required' | 'completed' | 'downloading' | 'error';
+  status: 'auth_required' | 'completed' | 'downloading';
   authCode?: string;
-  data?: ArrayBuffer;
-  progress?: number;
+  trackId?: string;
 }
 
 export class YtDlpService {
@@ -44,10 +47,14 @@ export class YtDlpService {
    */
   public static async downloadVideo(
     url: string,
-    options: DownloadOptions = {}
-  ): Promise<Blob | null> {
+    options: DownloadOptions
+  ): Promise<string> {
     if (!this.isValidYouTubeUrl(url)) {
       throw new Error('Invalid YouTube URL');
+    }
+
+    if (!options.metadata?.name) {
+      throw new Error('Track name is required');
     }
 
     try {
@@ -58,13 +65,20 @@ export class YtDlpService {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ 
+          url,
+          metadata: {
+            name: options.metadata.name,
+            description: options.metadata.description || '',
+            tags: options.metadata.tags || []
+          }
+        }),
         credentials: 'include',
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Download failed: ${errorText}`);
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Download failed');
       }
 
       const data: DownloadResponse = await response.json();
@@ -73,10 +87,14 @@ export class YtDlpService {
       if (data.status === 'auth_required') {
         window.open('https://www.google.com/device', '_blank');
         alert(`Please enter this code on the Google device page: ${data.authCode}`);
-        return await this.pollDownloadStatus(options.onProgress);
+        return await this.pollDownloadStatus();
       }
 
-      return null;
+      if (data.status === 'completed' && data.trackId) {
+        return data.trackId;
+      }
+
+      throw new Error('Unexpected response from server');
     } catch (error) {
       dbg.store(`Download error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error;
@@ -88,12 +106,9 @@ export class YtDlpService {
    * @param onProgress - Optional callback for download progress
    * @returns Promise with the downloaded audio as a Blob
    */
-  private static async pollDownloadStatus(
-    onProgress?: (progress: number) => void,
-    interval = 1000
-  ): Promise<Blob | null> {
+  private static async pollDownloadStatus(interval = 1000): Promise<string> {
     let attempts = 0;
-    const maxAttempts = 300; // 5 minutes maximum
+    const maxAttempts = 300;
 
     while (attempts < maxAttempts) {
       try {
@@ -108,17 +123,8 @@ export class YtDlpService {
         const data: DownloadResponse = await response.json();
         dbg.store('Download status:', data);
 
-        if (data.progress && onProgress) {
-          onProgress(data.progress);
-        }
-
-        if (data.status === 'completed' && data.data) {
-          // Convert the ArrayBuffer to a Blob
-          return new Blob([new Uint8Array(data.data)], { type: 'audio/mpeg' });
-        }
-
-        if (data.status === 'error') {
-          throw new Error('Download failed on server');
+        if (data.status === 'completed' && data.trackId) {
+          return data.trackId;
         }
 
         await new Promise(resolve => setTimeout(resolve, interval));

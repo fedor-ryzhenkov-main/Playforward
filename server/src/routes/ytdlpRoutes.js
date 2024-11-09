@@ -3,19 +3,23 @@ const YoutubeService = require('../services/ytdlpService');
 const router = express.Router();
 
 router.post('/download/init', async (req, res) => {
-  const { url } = req.body;
-  const userId = '0000'; // TODO: Get actual user ID from auth
+  const { url, metadata } = req.body;
+  const userId = req.user.id;
 
   try {
-    console.log('Initiating download for URL:', url); // Debug logging
+    console.log('Initiating download for URL:', url, 'with metadata:', metadata);
     
-    const result = await YoutubeService.initiateDownload(userId, url);
+    if (!metadata?.name) {
+      throw new Error('Track name is required');
+    }
+
+    const result = await YoutubeService.initiateDownload(userId, url, metadata);
     
-    console.log('Download initiation result:', result); // Debug logging
+    console.log('Download initiation result:', result);
     
     res.json(result);
   } catch (error) {
-    console.error('Download initialization error:', error); // Debug logging
+    console.error('Download initialization error:', error);
     
     res.status(500).json({
       error: 'Download failed',
@@ -24,11 +28,11 @@ router.post('/download/init', async (req, res) => {
   }
 });
 
-router.get('/download/status', (req, res) => {
-  const userId = '0000';
+router.get('/download/status', async (req, res) => {
+  const userId = req.user.id;
   
   try {
-    const status = YoutubeService.getDownloadStatus(userId);
+    const status = await YoutubeService.getDownloadStatus(userId);
     res.json(status);
   } catch (error) {
     res.status(500).json({
@@ -38,11 +42,11 @@ router.get('/download/status', (req, res) => {
   }
 });
 
-router.delete('/download', (req, res) => {
-  const userId = '0000';
+router.delete('/download', async (req, res) => {
+  const userId = req.user.id;
   
   try {
-    YoutubeService.cleanupDownload(userId);
+    await YoutubeService.cleanupDownload(userId);
     res.json({ status: 'cleaned' });
   } catch (error) {
     res.status(500).json({

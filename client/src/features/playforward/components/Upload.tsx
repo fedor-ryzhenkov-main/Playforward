@@ -6,6 +6,7 @@ import { closeModal } from 'store/modal/modalSlice';
 import { uploadTrackAsync } from 'store/tracks/trackThunks';
 import { AppDispatch } from 'store';
 import { dbg } from 'utils/debug';
+import { loadTracksAsync } from 'store/tracks/trackThunks';
 
 interface UploadProps {
   title?: string;
@@ -68,24 +69,15 @@ export const Upload: React.FC<UploadProps> = ({ title }) => {
         })).unwrap();
       } else if (uploadType === 'youtube' && youtubeURL) {
         dbg.store('Starting YouTube download...');
-        const audioBlob = await YtDlpService.downloadVideo(youtubeURL);
-
-        if (!audioBlob) {
-          throw new Error('Failed to download audio');
-        }
-
-        const blob = new Blob([audioBlob], { type: 'audio/mpeg' });
-        const youtubeFile = new File([blob], `${metadata.name}.mp3`, {
-          type: 'audio/mpeg',
+        const trackId = await YtDlpService.downloadVideo(youtubeURL, {
+          metadata: {
+            name: metadata.name,
+            description: metadata.description,
+            tags: metadata.tags,
+          }
         });
-
-        dbg.store('Starting upload of downloaded YouTube audio...');
-        await dispatch(uploadTrackAsync({
-          file: youtubeFile,
-          name: metadata.name,
-          description: metadata.description,
-          tags: metadata.tags,
-        })).unwrap();
+        
+        await dispatch(loadTracksAsync()).unwrap();
       }
 
       dispatch(closeModal());

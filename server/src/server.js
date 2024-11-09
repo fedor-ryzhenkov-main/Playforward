@@ -62,7 +62,12 @@ app.use(cors({
   origin: CLIENT_URL,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization',
+    'Cache-Control',
+    'Pragma'
+  ],
   exposedHeaders: ['Set-Cookie'],
   maxAge: 600,
 }));
