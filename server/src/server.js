@@ -35,8 +35,8 @@ if (process.env.NODE_ENV !== 'production') {
   app.use(morgan(':method :url :status :response-time ms - :user-id'));
 }
 
-// Basic middleware
-app.use(cors({ origin: CLIENT_URL, credentials: true }));
+app.set('trust proxy', 1);
+
 app.use(express.json());
 app.use(session({
   store: new pgSession({
