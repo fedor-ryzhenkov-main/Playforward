@@ -100,7 +100,7 @@ export class YtDlpService {
         const data = await response.json();
         dbg.store('Download status:', data);
 
-        if (data.status === 'completed') {
+        if (data.status === 'completed' && data.data) {
           return new Blob([data.data], { type: 'audio/mpeg' });
         }
 

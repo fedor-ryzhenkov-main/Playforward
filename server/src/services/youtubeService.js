@@ -8,23 +8,14 @@ class YoutubeService {
     return new Promise((resolve, reject) => {
       const isDevelopment = (process.env.NODE_ENV || 'development') === 'development';
       
-      const args = isDevelopment 
-        ? [
-            url,
-            '--extract-audio',
-            '--audio-format', 'mp3',
-            '--audio-quality', '0',
-            '-o', '-'
-          ]
-        : [
-            `--username=oauth+${userId}`,
-            '--password=""',
-            url,
-            '--extract-audio',
-            '--audio-format', 'mp3',
-            '--audio-quality', '0',
-            '-o', '-'
-          ];
+      const args = [
+        ...(isDevelopment ? [] : [`--username=oauth+${userId}`, '--password=""']),
+        url,
+        '--extract-audio',
+        '--audio-format', 'mp3',
+        '--audio-quality', '0',
+        '-o', '-'  // Output to stdout
+      ];
 
       console.log('Spawning yt-dlp with args:', args);
 
@@ -34,6 +25,13 @@ class YoutubeService {
       ytDlp.stdout.on('data', (data) => {
         chunks.push(data);
         console.log('Received chunk of size:', data.length);
+        
+        // Update process status with download progress
+        const processInfo = this.downloadProcesses.get(userId);
+        if (processInfo) {
+          processInfo.chunks = chunks;
+          processInfo.status = 'downloading';
+        }
       });
 
       ytDlp.stderr.on('data', (data) => {
@@ -42,6 +40,12 @@ class YoutubeService {
 
         if (output.includes('enter code')) {
           const authCode = output.match(/code\s+([A-Z0-9-]+)/)[1];
+          this.downloadProcesses.set(userId, {
+            process: ytDlp,
+            chunks: chunks,
+            status: 'auth_required',
+            authCode
+          });
           resolve({
             status: 'auth_required',
             authCode
@@ -51,6 +55,7 @@ class YoutubeService {
 
       ytDlp.on('error', (error) => {
         console.error('yt-dlp process error:', error);
+        this.downloadProcesses.delete(userId);
         reject(error);
       });
 
@@ -59,18 +64,19 @@ class YoutubeService {
         
         if (code === 0) {
           const buffer = Buffer.concat(chunks);
-          resolve({
-            status: 'completed',
-            data: buffer
-          });
+          const processInfo = this.downloadProcesses.get(userId);
+          if (processInfo) {
+            processInfo.status = 'completed';
+            processInfo.data = buffer;
+          }
+          
+          if (!isDevelopment && !processInfo?.authCode) {
+            resolve({ status: 'completed', data: buffer });
+          }
         } else {
+          this.downloadProcesses.delete(userId);
           reject(new Error(`yt-dlp process exited with code ${code}`));
         }
-      });
-
-      this.downloadProcesses.set(userId, {
-        process: ytDlp,
-        status: 'downloading'
       });
     });
   }
@@ -80,8 +86,19 @@ class YoutubeService {
     if (!processInfo) {
       return { status: 'not_found' };
     }
+
+    if (processInfo.status === 'completed' && processInfo.data) {
+      const data = processInfo.data;
+      this.downloadProcesses.delete(userId); // Cleanup after sending data
+      return {
+        status: 'completed',
+        data
+      };
+    }
+
     return {
-      status: processInfo.status
+      status: processInfo.status,
+      authCode: processInfo.authCode
     };
   }
 
