@@ -20,7 +20,7 @@ ingress:
     match:
       path:
         prefix: /server
-name: playforward-app-yaml
+name: playforward
 region: lon
 services:
 - dockerfile_path: server/Dockerfile
