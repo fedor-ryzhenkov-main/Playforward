@@ -1,6 +1,10 @@
 databases:
-- engine: PG
+- cluster_name: app-3c8969d9-8d1b-43dd-8846-3c382ae46f07
+  db_name: db
+  db_user: db
+  engine: PG
   name: db
+  production: true
 domains:
 - domain: playforward.fedor-ryzhenkov.com
   type: PRIMARY
@@ -16,7 +20,7 @@ ingress:
     match:
       path:
         prefix: /server
-name: playforward
+name: playforward-app-yaml
 region: lon
 services:
 - dockerfile_path: server/Dockerfile
